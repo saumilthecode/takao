@@ -27,8 +27,8 @@
  * ============================================================
  */
 
-import { getAllUsers } from '../data/seedUsers.js';
-import { cosineSimilarity, searchWithEf } from './vectorStore.js';
+import { getAllUsers } from '../data/seedUsers';
+import { cosineSimilarity, searchWithEf } from './vectorStore';
 
 export interface TunerConfig {
   M: number;           // Max connections per node

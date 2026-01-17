@@ -14,7 +14,9 @@
  * ============================================================
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Use relative paths for API calls (works with Vercel deployment)
+// Empty string means relative to current origin, which works for both dev and production
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -111,7 +113,7 @@ export interface TunerResponse {
  * Fetch the social graph data
  */
 export async function fetchGraph(mode: 'force' | 'embedding' = 'force'): Promise<GraphData> {
-  const res = await fetch(`${API_BASE}/graph?mode=${mode}`);
+  const res = await fetch(`${API_BASE}/api/graph?mode=${mode}`);
   if (!res.ok) throw new Error('Failed to fetch graph');
   return res.json();
 }
@@ -124,7 +126,7 @@ export async function sendChatMessage(
   message: string,
   history: ChatMessage[]
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_BASE}/chat`, {
+  const res = await fetch(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, message, history })
@@ -140,7 +142,7 @@ export async function fetchMatchExplanation(
   id1: string,
   id2: string
 ): Promise<MatchExplanation> {
-  const res = await fetch(`${API_BASE}/graph/match/${id1}/${id2}`);
+  const res = await fetch(`${API_BASE}/api/graph/match/${id1}/${id2}`);
   if (!res.ok) throw new Error('Failed to fetch match explanation');
   return res.json();
 }
@@ -149,7 +151,7 @@ export async function fetchMatchExplanation(
  * Fetch tuner benchmark results
  */
 export async function fetchTunerBenchmark(latencyBudget: number = 50): Promise<TunerResponse> {
-  const res = await fetch(`${API_BASE}/tuner/benchmark?latencyBudget=${latencyBudget}`);
+  const res = await fetch(`${API_BASE}/api/tuner/benchmark?latencyBudget=${latencyBudget}`);
   if (!res.ok) throw new Error('Failed to fetch benchmark');
   return res.json();
 }
@@ -158,7 +160,7 @@ export async function fetchTunerBenchmark(latencyBudget: number = 50): Promise<T
  * Simulate a demo conversation
  */
 export async function simulateChat(userId: string): Promise<{ conversation: ChatMessage[] }> {
-  const res = await fetch(`${API_BASE}/chat/simulate`, {
+  const res = await fetch(`${API_BASE}/api/chat/simulate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId })

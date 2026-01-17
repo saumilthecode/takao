@@ -28,7 +28,7 @@
  * ============================================================
  */
 
-import { getAllUsers, getUserById, upsertUser, User } from '../data/seedUsers.js';
+import { getAllUsers, getUserById, upsertUser, User } from '../data/seedUsers';
 
 // Note: In production, use actual hnswlib-node
 // For demo, we use brute-force search (works for <1000 vectors)

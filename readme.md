@@ -18,20 +18,20 @@ echo "openaikey=your-api-key-here" > .env
 # 2. Install dependencies
 npm install
 
-# 3. Start the API server
+# 3. Start the development server
 npm run dev
-# API runs on http://localhost:4000
+# App runs on http://localhost:3000
 ```
 
 ### Quick Test
 
 ```bash
 # Test API health
-curl http://localhost:4000/health
+curl http://localhost:3000/api/health
 # Should return: {"status":"ok","timestamp":...}
 
 # Test chat endpoint
-curl -X POST http://localhost:4000/chat \
+curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
   -d '{"userId":"test","message":"Hello!","history":[]}'
 ```
@@ -41,11 +41,14 @@ curl -X POST http://localhost:4000/chat \
 ```
 takoa/
 ├── .env                  ← Your OpenAI API key (create this)
-├── src/                  ← Fastify + TypeScript API (port 4000)
-│   ├── index.ts          ← Server entry point
-│   ├── routes/           ← API endpoints (/chat, /graph, /tuner)
+├── app/                  ← Next.js App Router
+│   ├── api/              ← API routes (/api/chat, /api/graph, etc.)
+│   └── page.tsx          ← Main page component
+├── components/           ← React components (SocialGraph, ChatInterface)
+├── src/                  ← Shared TypeScript services
 │   ├── services/         ← Business logic (HNSW, UMAP, LLM)
 │   └── data/             ← Seed data and user management
+├── lib/                  ← Client-side utilities (API client)
 ├── scripts/ralph/        ← Ralph automation scripts
 └── prd.json              ← Product requirements document
 ```
@@ -53,16 +56,18 @@ takoa/
 ## 🛠️ Development Commands
 
 ```bash
-npm run dev               # Start API dev server with hot reload
-npm run build             # Build TypeScript to dist/
+npm run dev               # Start Next.js dev server (port 3000)
+npm run build             # Build for production
 npm start                 # Run production build
-npm test                  # Run tests (health check)
+npm run lint              # Run ESLint
 ```
 
 ## 📡 API Endpoints
 
-- `GET /health` - Health check
-- `POST /chat` - Chat with onboarding bot
+All endpoints are under `/api/`:
+
+- `GET /api/health` - Health check
+- `POST /api/chat` - Chat with onboarding bot
   ```json
   {
     "userId": "string",
@@ -70,9 +75,9 @@ npm test                  # Run tests (health check)
     "history": [{"role": "user|assistant", "content": "string"}]
   }
   ```
-- `GET /graph` - Get social graph data
-- `GET /graph/match/:id1/:id2` - Get match explanation
-- `GET /tuner/benchmark` - Get index tuner results
+- `GET /api/graph` - Get social graph data
+- `GET /api/graph/match/:id1/:id2` - Get match explanation
+- `GET /api/tuner/benchmark` - Get index tuner results
 
 ## 🔑 Environment Setup
 
@@ -96,9 +101,21 @@ Get your API key from: https://platform.openai.com/api-keys
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14, shadcn/ui, react-force-graph-3d, recharts
-- **Backend**: Fastify, TypeScript, hnswlib-node, density-clustering, umap-js
+- **Framework**: Next.js 14 (App Router) with API Routes
+- **Frontend**: shadcn/ui, react-force-graph-3d, recharts
+- **Backend**: Next.js API Routes, TypeScript, hnswlib-node, density-clustering, umap-js
 - **LLM**: OpenAI GPT-4
+
+## 🚀 Deployment
+
+The app is ready for deployment on **Vercel**:
+
+1. Push to GitHub
+2. Import to Vercel
+3. Add environment variable `openaikey` in Vercel dashboard
+4. Deploy!
+
+All API routes are automatically handled by Next.js API Routes.
 
 ## 🤖 Ralph - Autonomous Development
 

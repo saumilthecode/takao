@@ -4,11 +4,8 @@
   "description": "Takoa - Social Space Matching Platform",
   "scripts": {
     "dev": "next dev",
-    "dev:api": "tsx watch src/index.ts",
-    "build": "next build && tsc",
-    "build:api": "tsc -p tsconfig.api.json",
+    "build": "next build",
     "start": "next start",
-    "start:api": "node dist/index.js",
     "lint": "next lint"
   },
   "dependencies": {
