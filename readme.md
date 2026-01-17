@@ -67,7 +67,8 @@ npm run lint              # Run ESLint
 All endpoints are under `/api/`:
 
 - `GET /api/health` - Health check
-- `POST /api/chat` - Chat with onboarding bot
+- `POST /api/chat` - Chat with onboarding bot (with RAG)
+  - Retrieves similar users from vector store for context-aware responses
   ```json
   {
     "userId": "string",
@@ -93,7 +94,9 @@ Get your API key from: https://platform.openai.com/api-keys
 
 ## 🎬 Demo Features
 
-1. **Chat Onboarding** - LLM extracts personality traits
+1. **Chat Onboarding** - LLM extracts personality traits with **RAG (Retrieval-Augmented Generation)**
+   - Retrieves similar users from vector store for context-aware responses
+   - LLM understands community interests and personalities
 2. **3D Social Graph** - react-force-graph-3d visualization
 3. **Match Explainer** - Why two people are matched
 4. **Embedding Toggle** - Force view ↔ UMAP view
@@ -104,7 +107,9 @@ Get your API key from: https://platform.openai.com/api-keys
 - **Framework**: Next.js 14 (App Router) with API Routes
 - **Frontend**: shadcn/ui, react-force-graph-3d, recharts
 - **Backend**: Next.js API Routes, TypeScript, hnswlib-node, density-clustering, umap-js
-- **LLM**: OpenAI GPT-4
+- **LLM**: OpenAI GPT-4 with **RAG (Retrieval-Augmented Generation)**
+  - Retrieves similar users from vector store before generating responses
+  - Uses HNSW vector search for fast similarity matching
 
 ## 🚀 Deployment
 

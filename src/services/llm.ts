@@ -23,6 +23,8 @@
  */
 
 import OpenAI from 'openai';
+import { getKNearestNeighbors } from './vectorStore';
+import { getUserById, getAllUsers } from '../data/seedUsers';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -47,8 +49,8 @@ export interface ChatResponse {
   profileUpdate: ProfileUpdate;
 }
 
-// System prompt for the onboarding chatbot
-const SYSTEM_PROMPT = `You are an onboarding buddy for a friend-making app for university students (age 18–26).
+// Base system prompt for the onboarding chatbot
+const BASE_SYSTEM_PROMPT = `You are an onboarding buddy for a friend-making app for university students (age 18–26).
 Your job is to have a friendly 5–10 minute conversation that helps the user express preferences and personality.
 You must NOT decide who the user should be matched with.
 You must only:
@@ -90,16 +92,101 @@ Goal:
 Help the user naturally reveal what they enjoy doing, how they like to meet people, and what kind of group dynamic they prefer.`;
 
 /**
- * Send a message to the chatbot and get structured response
+ * Retrieve similar users for RAG context
+ */
+async function getSimilarUsersContext(userId: string, k: number = 3): Promise<string> {
+  try {
+    const user = getUserById(userId);
+    if (!user) {
+      // New user, return examples from all users
+      const allUsers = getAllUsers();
+      const examples = allUsers.slice(0, k).map(u => ({
+        name: u.name,
+        age: u.age,
+        uni: u.uni,
+        interests: u.interests.slice(0, 5).join(', ')
+      }));
+      
+      return `Here are examples of user profiles in the community:
+${examples.map((ex, i) => `${i + 1}. ${ex.name} (${ex.age}, ${ex.uni}) - Interests: ${ex.interests}`).join('\n')}`;
+    }
+
+    // Retrieve similar users
+    try {
+      const neighbors = await getKNearestNeighbors(userId, k);
+      const similarUsers = neighbors
+        .map(n => getUserById(n.id))
+        .filter((u): u is NonNullable<typeof u> => u !== undefined)
+        .slice(0, k)
+        .map(u => ({
+          name: u.name,
+          age: u.age,
+          uni: u.uni,
+          interests: u.interests.slice(0, 5).join(', '),
+          similarity: neighbors.find(n => n.id === u.id)?.similarity || 0
+        }));
+
+      if (similarUsers.length === 0) {
+        // Fallback to examples
+        const allUsers = getAllUsers();
+        const examples = allUsers.slice(0, k).map(u => ({
+          name: u.name,
+          age: u.age,
+          uni: u.uni,
+          interests: u.interests.slice(0, 5).join(', ')
+        }));
+        
+        return `Here are examples of user profiles in the community:
+${examples.map((ex, i) => `${i + 1}. ${ex.name} (${ex.age}, ${ex.uni}) - Interests: ${ex.interests}`).join('\n')}`;
+      }
+
+      return `Here are similar users in the community that share interests/traits:
+${similarUsers.map((u, i) => `${i + 1}. ${u.name} (${u.age}, ${u.uni}) - Interests: ${u.interests}`).join('\n')}
+
+Use these as context to understand what kinds of people exist in the community, but don't mention specific names to the user.`;
+    } catch (neighborError) {
+      // User might not be in vector index yet, fallback to examples
+      const allUsers = getAllUsers();
+      const examples = allUsers.slice(0, k).map(u => ({
+        name: u.name,
+        age: u.age,
+        uni: u.uni,
+        interests: u.interests.slice(0, 5).join(', ')
+      }));
+      
+      return `Here are examples of user profiles in the community:
+${examples.map((ex, i) => `${i + 1}. ${ex.name} (${ex.age}, ${ex.uni}) - Interests: ${ex.interests}`).join('\n')}`;
+    }
+  } catch (error) {
+    console.error('Error retrieving similar users:', error);
+    // Final fallback: return empty string if everything fails
+    return '';
+  }
+}
+
+/**
+ * Send a message to the chatbot and get structured response (with RAG)
  */
 export async function chatWithBot(
   userMessage: string,
-  history: { role: 'user' | 'assistant'; content: string }[]
+  history: { role: 'user' | 'assistant'; content: string }[],
+  userId?: string
 ): Promise<ChatResponse> {
   
+  // Retrieve similar users for RAG context
+  let ragContext = '';
+  if (userId) {
+    ragContext = await getSimilarUsersContext(userId, 3);
+  }
+
+  // Build system prompt with RAG context
+  const systemPrompt = ragContext 
+    ? `${BASE_SYSTEM_PROMPT}\n\n## Community Context (for your reference only)\n${ragContext}\n\nRemember: Don't mention specific user names, but use this context to understand what interests and personalities exist in the community.`
+    : BASE_SYSTEM_PROMPT;
+
   // Build messages array
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     ...history.map(h => ({
       role: h.role as 'user' | 'assistant',
       content: h.content

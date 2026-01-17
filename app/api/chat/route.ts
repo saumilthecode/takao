@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get response from LLM with structured profile extraction
-    const response = await chatWithBot(message, history || []);
+    // Get response from LLM with structured profile extraction (with RAG)
+    const response = await chatWithBot(message, history || [], userId);
 
     // Update user's vector in the store if profile changed
     if (response.profileUpdate) {
