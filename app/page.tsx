@@ -60,7 +60,11 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div
+        className={`w-full ${
+          activeTab === 'space' ? 'max-w-none px-0 pt-4 pb-0' : 'max-w-7xl mx-auto p-6'
+        }`}
+      >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
             <TabsTrigger value="chat" className="flex items-center gap-2 shadow-md">
@@ -81,7 +85,7 @@ export default function Home() {
             <ChatInterface userId={sessionUserId} onProfileUpdate={handleProfileUpdate} />
           </TabsContent>
 
-          <TabsContent value="space" className="mt-6">
+          <TabsContent value="space" className="mt-0 w-full px-0 pb-6">
             <SocialGraph key={graphRefreshKey} focusUserId={sessionUserId} />
           </TabsContent>
 
