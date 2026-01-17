@@ -34,9 +34,6 @@ import { Badge } from '@/components/ui/badge';
 import { Send, Bot, User, Play, Loader2, Sparkles, RotateCcw } from 'lucide-react';
 import { sendChatMessage, simulateChat, ChatMessage, ProfileUpdate } from '@/lib/api';
 
-// Generate a random user ID for this session
-const SESSION_USER_ID = `user_demo_${Date.now()}`;
-
 const SCENARIO_SCRIPTS: Record<string, string> = {
   introvert_deep: "I'm more introverted and I really like deep conversations, especially about books, films, or ideas.",
   outgoing_events: "I'm outgoing and I like meeting people at events, clubs, or campus nights.",
@@ -45,10 +42,11 @@ const SCENARIO_SCRIPTS: Record<string, string> = {
 };
 
 interface ChatInterfaceProps {
+  userId: string;
   onProfileUpdate?: () => void;
 }
 
-export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
+export default function ChatInterface({ userId, onProfileUpdate }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
@@ -107,7 +105,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(SESSION_USER_ID, userMessage, messages);
+      const response = await sendChatMessage(userId, userMessage, messages);
       const fallbackMessage = (response as { assistantMessage?: string }).assistantMessage;
       const assistantMessages = response.assistantMessages?.length
         ? response.assistantMessages
@@ -157,7 +155,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, isChatReady, messages, onProfileUpdate, scheduleAssistantMessages]);
+  }, [input, isLoading, isChatReady, messages, onProfileUpdate, scheduleAssistantMessages, userId]);
 
   const handleSimulate = useCallback(async () => {
     setIsLoading(true);
@@ -170,7 +168,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     }]);
     setProfile(null);
     try {
-      const { conversation } = await simulateChat(SESSION_USER_ID);
+      const { conversation } = await simulateChat(userId);
       setMessages(conversation);
       // Simulate profile update from demo
       setProfile({
@@ -190,7 +188,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [onProfileUpdate]);
+  }, [clearPendingTimeouts, onProfileUpdate, userId]);
 
   const handleReset = useCallback(() => {
     clearPendingTimeouts();
@@ -431,12 +429,12 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
             </div>
             <div className="pt-2">
               <Button asChild variant="outline" size="sm">
-                <a href="https://example.com/pay?amount=5" target="_blank" rel="noreferrer">
+                <a href="/pay?amount=5">
                   Pay $5 (mock)
                 </a>
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
-                Fake link for demo check-in.
+                Demo payment page for check-in.
               </p>
             </div>
           </CardContent>

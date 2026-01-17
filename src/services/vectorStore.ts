@@ -185,6 +185,18 @@ export async function updateUserVector(
     vectorIndex.set(userId, blendedVector);
   } else {
     // New user
+    const newUser: User = {
+      id: userId,
+      name: 'you',
+      age: 20,
+      uni: 'Your University',
+      vector: newVector,
+      traits: profileUpdate.traits,
+      interests: [],
+      confidence: clamp(profileUpdate.confidence, 0, 1)
+    };
+
+    upsertUser(newUser);
     vectorIndex.set(userId, newVector);
   }
 }

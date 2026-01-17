@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import * as THREE from 'three';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -28,24 +29,31 @@ import { Users, X } from 'lucide-react';
 // Dynamically import ForceGraph3D to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
-export default function SocialGraph() {
+interface SocialGraphProps {
+  focusUserId?: string;
+}
+
+export default function SocialGraph({ focusUserId }: SocialGraphProps) {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
   const [graphMode, setGraphMode] = useState<'force' | 'embedding'>('force');
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
   const [topMatches, setTopMatches] = useState<Array<{ node: GraphNode; similarity: number }>>([]);
   const [matchExplanation, setMatchExplanation] = useState<MatchExplanation | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GraphNode } | null>(null);
   const [linkThreshold, setLinkThreshold] = useState(0.2);
   const [highlightPod, setHighlightPod] = useState(false);
   const graphRef = useRef<any>();
+  const glowTextureRef = useRef<THREE.Texture | null>(null);
+  const sphereGeometryRef = useRef(new THREE.SphereGeometry(1, 24, 24));
 
   // Fetch graph data on mount
   useEffect(() => {
     loadGraph();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graphMode]);
+  }, [graphMode, focusUserId]);
 
   const loadGraph = async () => {
     try {
@@ -60,8 +68,38 @@ export default function SocialGraph() {
         return nodeIds.has(sourceId) && nodeIds.has(targetId);
       });
       
+      const centeredNodes = (() => {
+        if (!data.nodes.length) return data.nodes;
+        const centroid = data.nodes.reduce(
+          (acc, node) => {
+            acc.x += node.x;
+            acc.y += node.y;
+            acc.z += node.z;
+            return acc;
+          },
+          { x: 0, y: 0, z: 0 }
+        );
+        centroid.x /= data.nodes.length;
+        centroid.y /= data.nodes.length;
+        centroid.z /= data.nodes.length;
+        return data.nodes.map(node => ({
+          ...node,
+          x: node.x - centroid.x,
+          y: node.y - centroid.y,
+          z: node.z - centroid.z
+        }));
+      })();
+
+      if (centeredNodes.length > 0) {
+        const preferredFocus = focusUserId && centeredNodes.some(node => node.id === focusUserId)
+          ? focusUserId
+          : centeredNodes[0].id;
+        setFocusNodeId(preferredFocus);
+      }
+
       setGraphData({
         ...data,
+        nodes: centeredNodes,
         links: validLinks
       });
     } catch (error) {
@@ -70,6 +108,13 @@ export default function SocialGraph() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!graphData || !focusUserId) return;
+    if (graphData.nodes.some(node => node.id === focusUserId)) {
+      setFocusNodeId(focusUserId);
+    }
+  }, [focusUserId, graphData]);
 
   // Handle node hover - show tooltip
   const handleNodeHover = useCallback((node: GraphNode | null, event?: MouseEvent) => {
@@ -137,14 +182,6 @@ export default function SocialGraph() {
     }
   };
 
-  // Update link opacity based on selection
-  const getLinkOpacity = useCallback((link: GraphLink) => {
-    if (!selectedNode) return 0.3;
-    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-    return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 1 : 0.1;
-  }, [selectedNode]);
-
   // Update link width based on selection
   const getLinkWidth = useCallback((link: GraphLink) => {
     if (!selectedNode) return 1;
@@ -153,10 +190,118 @@ export default function SocialGraph() {
     return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 3 : 0.5;
   }, [selectedNode]);
 
+  const getLinkColor = useCallback((link: GraphLink) => {
+    const strength = link?.strength ?? 0.2;
+    if (!selectedNode) {
+      return `rgba(195,206,148,${Math.min(0.5, Math.max(0.12, strength))})`;
+    }
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    const isActive = sourceId === selectedNode.id || targetId === selectedNode.id;
+    const alpha = isActive ? Math.min(0.8, Math.max(0.2, strength + 0.2)) : 0.08;
+    return `rgba(195,206,148,${alpha})`;
+  }, [selectedNode]);
+
   const podNodeIds = useMemo(() => {
     if (!selectedNode || topMatches.length === 0) return new Set<string>();
     return new Set([selectedNode.id, ...topMatches.map(match => match.node.id)]);
   }, [selectedNode, topMatches]);
+
+  const getNodeTone = useCallback((node: GraphNode) => {
+    const isSelected = selectedNode && node.id === selectedNode.id;
+    const isHovered = hoveredNode && node.id === hoveredNode.id;
+    const isPod = highlightPod && podNodeIds.has(node.id);
+    const isFocus = focusNodeId && node.id === focusNodeId;
+    if (isSelected) return { color: '#e7f0b8', glow: 0.9, sizeBoost: 2.2 };
+    if (isHovered) return { color: '#f1f6d7', glow: 0.7, sizeBoost: 1.4 };
+    if (isPod) return { color: '#cfe0a1', glow: 0.55, sizeBoost: 1.1 };
+    if (isFocus) return { color: '#7ef3ff', glow: 0.75, sizeBoost: 1.4 };
+    const colors = ['#c3ce94', '#aab874', '#92a45f', '#7a904b', '#6a7d3f', '#576636'];
+    const color = colors[node.clusterId % colors.length] || '#6b7280';
+    return { color, glow: 0.35, sizeBoost: 1 };
+  }, [focusNodeId, highlightPod, hoveredNode, podNodeIds, selectedNode]);
+
+  const getNodeBaseSize = useCallback((node: GraphNode) => {
+    const base = 2.6 + (node.traits?.extraversion || 0) * 1.8;
+    return base;
+  }, []);
+
+  const buildGlowTexture = useCallback(() => {
+    if (glowTextureRef.current) return glowTextureRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const gradient = ctx.createRadialGradient(64, 64, 6, 64, 64, 64);
+    gradient.addColorStop(0, 'rgba(255,255,255,0.85)');
+    gradient.addColorStop(0.4, 'rgba(255,255,255,0.35)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 128);
+    const texture = new THREE.CanvasTexture(canvas);
+    glowTextureRef.current = texture;
+    return texture;
+  }, []);
+
+  const createNodeObject = useCallback((node: GraphNode) => {
+    const group = new THREE.Group();
+    const tone = getNodeTone(node);
+    const size = getNodeBaseSize(node) * tone.sizeBoost;
+    const sphere = new THREE.Mesh(
+      sphereGeometryRef.current,
+      new THREE.MeshStandardMaterial({
+        color: tone.color,
+        emissive: tone.color,
+        emissiveIntensity: 0.35,
+        metalness: 0.2,
+        roughness: 0.3
+      })
+    );
+    sphere.scale.setScalar(size);
+    group.add(sphere);
+
+    const glowTexture = buildGlowTexture();
+    if (glowTexture) {
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: tone.color,
+        transparent: true,
+        opacity: tone.glow,
+        depthWrite: false
+      });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      sprite.scale.set(size * 6, size * 6, 1);
+      sprite.renderOrder = -1;
+      group.add(sprite);
+    }
+
+    (node as any).__threeGroup = group;
+    return group;
+  }, [buildGlowTexture, getNodeBaseSize, getNodeTone]);
+
+  const updateNodeVisuals = useCallback(() => {
+    if (!graphData) return;
+    graphData.nodes.forEach(node => {
+      const group = (node as any).__threeGroup as THREE.Group | undefined;
+      if (!group) return;
+      const tone = getNodeTone(node);
+      const size = getNodeBaseSize(node) * tone.sizeBoost;
+      const sphere = group.children.find(child => child.type === 'Mesh') as THREE.Mesh | undefined;
+      if (sphere && sphere.material instanceof THREE.MeshStandardMaterial) {
+        sphere.material.color.set(tone.color);
+        sphere.material.emissive.set(tone.color);
+        sphere.material.emissiveIntensity = 0.35 + tone.glow * 0.5;
+        sphere.scale.setScalar(size);
+      }
+      const sprite = group.children.find(child => child.type === 'Sprite') as THREE.Sprite | undefined;
+      if (sprite && sprite.material instanceof THREE.SpriteMaterial) {
+        sprite.material.color.set(tone.color);
+        sprite.material.opacity = tone.glow;
+        sprite.scale.set(size * 6, size * 6, 1);
+      }
+    });
+  }, [getNodeBaseSize, getNodeTone, graphData]);
 
   const filteredGraphData = useMemo(() => {
     if (!graphData) return null;
@@ -192,10 +337,62 @@ export default function SocialGraph() {
   useEffect(() => {
     if (!filteredGraphData || !graphRef.current) return;
     const timeout = window.setTimeout(() => {
+      graphRef.current?.centerAt?.(0, 0, 0, 0);
       graphRef.current?.zoomToFit(800, 40);
     }, 200);
     return () => window.clearTimeout(timeout);
   }, [filteredGraphData]);
+
+  useEffect(() => {
+    if (!filteredGraphData || !graphRef.current) return;
+    if (graphMode === 'force') {
+      const linkForce = graphRef.current.d3Force?.('link');
+      if (linkForce?.distance) {
+        linkForce.distance((link: any) => {
+          const strength = (link as GraphLink)?.strength ?? 0.2;
+          return 110 - strength * 60;
+        });
+      }
+      const chargeForce = graphRef.current.d3Force?.('charge');
+      chargeForce?.strength?.(-120);
+      graphRef.current.d3ReheatSimulation?.();
+    }
+  }, [filteredGraphData, graphMode]);
+
+  useEffect(() => {
+    if (!graphRef.current) return;
+    const scene = graphRef.current.scene?.();
+    if (scene && !scene.getObjectByName('takoa-ambient')) {
+      const ambient = new THREE.AmbientLight(0xf3f7df, 0.8);
+      ambient.name = 'takoa-ambient';
+      scene.add(ambient);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+      keyLight.position.set(120, 80, 120);
+      keyLight.name = 'takoa-key';
+      scene.add(keyLight);
+
+      const fillLight = new THREE.PointLight(0xd6e0b0, 0.9, 600);
+      fillLight.position.set(-120, -40, 80);
+      fillLight.name = 'takoa-fill';
+      scene.add(fillLight);
+
+      scene.fog = new THREE.Fog(0x0b0f0a, 120, 420);
+    }
+
+    const renderer = graphRef.current.renderer?.();
+    if (renderer) {
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setClearColor(0x000000, 0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+    }
+  }, [filteredGraphData]);
+
+  useEffect(() => {
+    updateNodeVisuals();
+  }, [selectedNode, hoveredNode, highlightPod, podNodeIds, updateNodeVisuals]);
 
 
   if (loading) {
@@ -246,9 +443,15 @@ export default function SocialGraph() {
               <div className="absolute left-4 top-4 z-10 rounded-xl border border-border bg-background/70 px-3 py-2 text-xs text-foreground">
                 <div className="font-semibold">Legend</div>
                 <div className="mt-2 flex flex-col gap-1">
-                  <span>Clusters</span>
-                  <span>You</span>
-                  <span>Pod</span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#aab874]" />Clusters
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#7ef3ff]" />You
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#cfe0a1]" />Pod
+                  </span>
                 </div>
               </div>
 
@@ -312,31 +515,23 @@ export default function SocialGraph() {
                   ref={graphRef}
                   graphData={filteredGraphData}
                   nodeLabel={(node: any) => `${node.name}\n${node.age} years old\n${node.uni}`}
-                  nodeColor={(node: any) => {
-                    const isSelected = selectedNode && node.id === selectedNode.id;
-                    const isHovered = hoveredNode && node.id === hoveredNode.id;
-                    const isPod = highlightPod && podNodeIds.has(node.id);
-                    if (isSelected) return '#c3ce94';
-                    if (isHovered) return '#dbe4b7';
-                    if (isPod) return '#b7c789';
-                    const colors = ['#c3ce94', '#aab874', '#92a45f', '#7a904b', '#6a7d3f', '#576636'];
-                    return colors[node.clusterId % colors.length] || '#6b7280';
-                  }}
-                  nodeVal={(node: any) => {
-                    const base = 3 + (node.traits?.extraversion || 0) * 2;
-                    if (selectedNode && node.id === selectedNode.id) return base + 3;
-                    if (highlightPod && podNodeIds.has(node.id)) return base + 1.5;
-                    return base;
-                  }}
+                  nodeThreeObject={(node: any) => createNodeObject(node)}
+                  nodeThreeObjectExtend
                   linkSource="source"
                   linkTarget="target"
-                  linkOpacity={getLinkOpacity}
-                  linkWidth={getLinkWidth}
-                  linkColor={(link: any) => {
-                    const strength = link?.strength ?? 0.2;
-                    return `rgba(195,206,148,${Math.min(0.5, Math.max(0.12, strength))})`;
+                  linkOpacity={0.35}
+                  linkWidth={(link: any) => getLinkWidth(link as GraphLink)}
+                  linkColor={(link: any) => getLinkColor(link as GraphLink)}
+                  linkDirectionalParticles={(link: any) => {
+                    if (!selectedNode) return 0;
+                    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+                    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+                    return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 2 : 0;
                   }}
-                  onNodeHover={handleNodeHover}
+                  linkDirectionalParticleSpeed={0.006}
+                  linkDirectionalParticleWidth={1.6}
+                  linkDirectionalParticleColor={() => '#e7f0b8'}
+                  onNodeHover={(node: any, event: any) => handleNodeHover(node as GraphNode, event as MouseEvent)}
                   onNodeClick={(node: any) => {
                     handleNodeClick(node);
                     graphRef.current?.cameraPosition(
@@ -345,8 +540,9 @@ export default function SocialGraph() {
                       900
                     );
                   }}
-                  enableNodeDrag={true}
+                  enableNodeDrag={false}
                   showNavInfo={false}
+                  backgroundColor="rgba(0,0,0,0)"
                 />
               )}
 
