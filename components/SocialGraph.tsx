@@ -209,6 +209,25 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
     return new Set([selectedNode.id, ...topMatches.map(match => match.node.id)]);
   }, [selectedNode, topMatches]);
 
+  const podMembers = useMemo(() => {
+    if (!selectedNode) return [];
+    const members = [selectedNode, ...topMatches.map(match => match.node)];
+    return members.slice(0, 5);
+  }, [selectedNode, topMatches]);
+
+  const podCohesion = useMemo(() => {
+    if (!graphData || podMembers.length < 2) return null;
+    const podIds = new Set(podMembers.map(member => member.id));
+    const podLinks = graphData.links.filter(link => {
+      const sourceId = getLinkNodeId(link, 'source');
+      const targetId = getLinkNodeId(link, 'target');
+      return podIds.has(sourceId) && podIds.has(targetId);
+    });
+    if (!podLinks.length) return null;
+    const avg = podLinks.reduce((sum, link) => sum + (link.strength || 0), 0) / podLinks.length;
+    return avg;
+  }, [getLinkNodeId, graphData, podMembers]);
+
   const getNodeTone = useCallback((node: GraphNode) => {
     const isSelected = selectedNode && node.id === selectedNode.id;
     const isHovered = hoveredNode && node.id === hoveredNode.id;
@@ -346,6 +365,14 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
   }, [filteredGraphData]);
 
   useEffect(() => {
+    if (!graphData || selectedNode || !focusNodeId) return;
+    const focusNode = graphData.nodes.find(node => node.id === focusNodeId);
+    if (focusNode) {
+      handleNodeClick(focusNode);
+    }
+  }, [focusNodeId, graphData, handleNodeClick, selectedNode]);
+
+  useEffect(() => {
     if (!filteredGraphData || !graphRef.current) return;
     if (graphMode === 'force') {
       const linkForce = graphRef.current.d3Force?.('link');
@@ -476,6 +503,9 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                     Embedding
                   </Button>
                 </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Force is a physics layout. Embedding is a fixed coordinate map.
+                </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span>Link threshold</span>
@@ -490,6 +520,9 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                     onChange={(e) => setLinkThreshold(Number(e.target.value))}
                     className="w-full"
                   />
+                  <div className="text-[11px] text-muted-foreground">
+                    Higher hides weaker links to reduce clutter.
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -509,6 +542,9 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                   >
                     Reset camera
                   </Button>
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Highlight pod shows the circle of 5. Reset camera recenters the view.
                 </div>
               </div>
 
@@ -569,7 +605,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
         {selectedNode && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-lg">Pod of 5</CardTitle>
+              <CardTitle className="text-lg">Pod circle (5)</CardTitle>
               <button
                 onClick={() => {
                   setSelectedNode(null);
@@ -582,6 +618,13 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
               </button>
             </CardHeader>
             <CardContent>
+              <div className="text-xs text-muted-foreground mb-3">
+                Includes you and four closest connections.
+              </div>
+              <div className="rounded-lg border border-border px-3 py-2 text-sm mb-3">
+                <span className="font-medium">You:</span>{' '}
+                {selectedNode.name}
+              </div>
               <ScrollArea className="h-[300px]">
                 <div className="space-y-3">
                   {topMatches.map((match, idx) => (
@@ -618,9 +661,12 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-2xl font-bold text-primary">
-                {topMatches.length
-                  ? `${(topMatches.reduce((sum, match) => sum + match.similarity, 0) / topMatches.length * 100).toFixed(0)}%`
+                {podCohesion !== null
+                  ? `${(podCohesion * 100).toFixed(0)}%`
                   : '—'}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Average link strength across all connections inside the pod.
               </div>
               <div className="text-xs text-muted-foreground">Why this pod fits</div>
               <ul className="text-sm text-muted-foreground space-y-1">
