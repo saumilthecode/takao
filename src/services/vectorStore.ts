@@ -129,12 +129,12 @@ export async function getKNearestNeighbors(
   // Calculate similarity to all other users
   const similarities: { id: string; similarity: number }[] = [];
 
-  for (const [otherId, otherVector] of vectorIndex.entries()) {
+  vectorIndex.forEach((otherVector, otherId) => {
     if (otherId !== userId) {
       const sim = cosineSimilarity(userVector, otherVector);
       similarities.push({ id: otherId, similarity: sim });
     }
-  }
+  });
 
   // Sort by similarity descending and take top k
   similarities.sort((a, b) => b.similarity - a.similarity);
