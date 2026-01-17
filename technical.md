@@ -12,7 +12,7 @@ Legend:
 ☐ LLM does not rank/match/cluster people
 ☐ Matching is algorithmic + explainable
 ☐ “Quantum/latent space” is developer-facing (but you show it in demo)
-☐ Group matching is pods of 5, not 1-on-1
+☐ Group matching is circles of 5, not 1-on-1
 
 # 1) Frontend app (Next.js + shadcn/ui)
 
@@ -24,11 +24,11 @@ Legend:
 ☐ Layout contains:
   ✓ Chat panel
   ✓ Social Space panel (3D)
-  ☐ Inspector panel (vectors / pod / plan)
+  ☐ Inspector panel (vectors / circle / plan)
 
 ## 1.2 Shared UI components (no custom from scratch)
 
-✓ Cards (for profile/pod/plan)
+✓ Cards (for profile/circle/plan)
 ✓ Tabs (e.g., Space / Plan / Metrics)
 ✓ ScrollArea (chat transcript)
 ✓ Buttons (Send, Simulate, Generate Plan, Send to 5)
@@ -120,17 +120,17 @@ Legend:
 ☐ Pod selection considers compatibility between all members
 ☐ Avoids “hub-only” group (everyone close to you but not each other)
 ☐ Outputs:
-  ☐ `podMembers: [5 ids]`
+  ☐ `circleMembers: [5 ids]`
   ☐ `cohesionScore`
 
 ## 7.3 Pod visualization
 
 → Pod members are highlighted together
-☐ Edges between pod members are shown/highlighted
+☐ Edges between circle members are shown/highlighted
 
 # 8) Explainability (judge-proofing)
 
-## 8.1 Why pod?
+## 8.1 Why circle?
 
 ☐ Inspector shows:
   ☐ similarity score(s)
@@ -148,7 +148,7 @@ Legend:
 ## 9.1 Must-have interactions
 
 ✓ Hover node → show tooltip summary
-✓ Click node → select + highlight neighbors/pod
+✓ Click node → select + highlight neighbors/circle
 ✓ Camera controls work
 
 ## 9.2 Styling (minimum polish)
@@ -166,18 +166,18 @@ Legend:
 ✓ Clustering run exists (DBSCAN/HDBSCAN or placeholder)
 ✓ `clusterId` assigned to each node
 ✓ Nodes colored by `clusterId`
-☐ Optional: cluster bonus used in pod cohesion scoring
+☐ Optional: cluster bonus used in circle cohesion scoring
 
 # 11) Fixed Pod Plan (generated once, then mostly static)
 
 ## 11.1 Plan generation (deterministic template-based)
 
-☐ `POST /pod/plan` returns a structured plan object:
+☐ `POST /circle/plan` returns a structured plan object:
   ☐ title, summary
   ☐ steps (3–5)
   ☐ roles (optional)
   ☐ messageTemplate
-☐ Plan is generated once per pod (not re-generated every time)
+☐ Plan is generated once per circle (not re-generated every time)
 
 ## 11.2 Plan UI
 
@@ -195,7 +195,7 @@ Legend:
   ☐ “What do I bring?”
   ☐ “Can we reschedule?” (suggest options, user chooses)
 ☐ Disallowed:
-  ☐ changing the pod
+  ☐ changing the circle
   ☐ recommending different members
 ☐ Optional: generates a “broadcast message” to the group (simulated)
 
@@ -206,7 +206,7 @@ Legend:
   ☐ JSON parsing failure → automatic fallback to simulate
 ✓ Seed dataset exists (100+ users) so graph looks full
 ☐ “One-click demo path” exists:
-  ☐ simulate → pod formed → plan generated → sent
+  ☐ simulate → circle formed → plan generated → sent
 
 # 14) Optional systems flex: self-optimizing index tuner
 
@@ -221,7 +221,34 @@ Legend:
 
 ☐ 2.1 (chat works)
 ☐ 3.1 (structured profileUpdate exists)
-☐ 7 (pod-of-5 works)
-☐ 9 (3D graph renders + highlights pod)
+☐ 7 (circle-of-5 works)
+☐ 9 (3D graph renders + highlights circle)
 ☐ 11 (plan generated + sent)
 ☐ 13 (simulate fallback works)
+
+# Core skills & algorithms (official names)
+
+## Core skills
+
+- Conversational signal extraction (LLM structured output)
+- Semantic text embeddings (OpenAI embeddings)
+- Vector representation & normalization (L2 normalization)
+- Similarity search (cosine similarity / kNN retrieval)
+- Graph visualization (3D force‑directed graph)
+- Clustering (DBSCAN)
+- Dimensionality reduction (UMAP)
+
+## Algorithms & methods
+
+- **Cosine Similarity** (Salton & Buckley, 1988)
+- **k‑Nearest Neighbors (kNN)** (Cover & Hart, 1967)
+- **DBSCAN (Density‑Based Spatial Clustering of Applications with Noise)** (Ester et al., 1996)
+- **UMAP (Uniform Manifold Approximation and Projection)** (McInnes, Healy & Melville, 2018)
+- **Force‑directed layout (ForceAtlas‑style)** (Fruchterman & Reingold, 1991)
+- **L2 Normalization** (Salton & Buckley, 1988)
+- **Text Embeddings (OpenAI text‑embedding‑3‑small)** (Neelakantan et al., 2022)
+
+
+https://artsmart.ai/blog/top-embedding-models-in-2025/
+https://www.nature.com/articles/s41562-024-02089-y
+https://pmc.ncbi.nlm.nih.gov/articles/PMC11612277/

@@ -50,7 +50,7 @@ export async function GET(
     const semanticContributions = semantic1.map((value, idx) => {
       const diff = Math.abs(value - (semantic2[idx] ?? 0));
       const contribution = (1 - diff) * value * (semantic2[idx] ?? 0);
-      return { dimension: `interest_dim_${idx + 1}`, contribution: parseFloat(contribution.toFixed(3)) };
+      return { dimension: `interest_embedding_${idx + 1}`, contribution: parseFloat(contribution.toFixed(3)) };
     });
 
     // Find shared interests

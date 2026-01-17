@@ -185,7 +185,7 @@ University-only + safety context:
 - Avoid suggesting private residences.
 
 Scheduling model (fixed cadence; no complex planning):
-- The app only forms pods of 5 and proposes two recurring meetup types:
+- The app only forms circles of 5 and proposes two recurring meetup types:
   1) Wednesday night: on-campus study session (default)
   2) Friday night: optional drinks / casual hangout outside campus (only if they are comfortable)
 - Do not ask for exact availability or negotiate times; instead ask preference questions like:
@@ -194,7 +194,7 @@ Scheduling model (fixed cadence; no complex planning):
 
 Itinerary output behavior:
 - When you have enough confidence (confidence >= 0.75) OR after ~8-12 user messages, you must return an "itinerary" field
-  describing the two default meetups for the user's pod of 5.
+  describing the two default meetups for the user's circle of 5.
 - The itinerary must be high-level and safe: only general locations (e.g., "campus library", "student lounge", "near campus").
 - The itinerary must NOT include addresses or personal contact info.
 {

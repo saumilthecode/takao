@@ -55,7 +55,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 /* Ambient leaf image */
@@ -96,6 +107,67 @@
   }
   100% {
     transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.indicator-float {
+  display: inline-block;
+  animation: indicator-float 2.6s ease-in-out infinite;
+}
+
+@keyframes indicator-float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.page-bounce {
+  animation: page-bounce 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes page-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.98) translateY(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.01) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.step-enter {
+  animation: step-enter 420ms ease-out both;
+}
+
+.step-enter-delay {
+  animation: step-enter 520ms ease-out both;
+  animation-delay: 80ms;
+}
+
+.step-enter-delay-2 {
+  animation: step-enter 600ms ease-out both;
+  animation-delay: 140ms;
+}
+
+@keyframes step-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

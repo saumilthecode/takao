@@ -61,6 +61,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
   const [planSent, setPlanSent] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const pendingTimeouts = useRef<number[]>([]);
 
   // Auto-scroll to bottom on new messages
@@ -76,6 +77,12 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus();
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     return () => clearPendingTimeouts();
@@ -100,6 +107,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
 
     const userMessage = input.trim();
     setInput('');
+    inputRef.current?.focus();
     const newMessages = [...messages, { role: 'user' as const, content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
@@ -117,7 +125,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
         if (!planSent) {
           setPlanSent(true);
           scheduleAssistantMessages([
-            "Plan locked: study 4pm–7pm at Tutorial Room 79, NUS RC with your pod of 5.",
+            "Plan locked: study 4pm–7pm at Tutorial Room 79, NUS RC with your circle of 5.",
             "I'll share the same plan with the other four people."
           ]);
         }
@@ -187,6 +195,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
       console.error('Simulation error:', error);
     } finally {
       setIsLoading(false);
+      inputRef.current?.focus();
     }
   }, [clearPendingTimeouts, onProfileUpdate, userId]);
 
@@ -201,6 +210,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
     setScenarioKey('');
     setPlanVisible(false);
     setPlanSent(false);
+    inputRef.current?.focus();
   }, []);
 
   return (
@@ -298,6 +308,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
           {/* Input */}
           <div className="flex gap-2 mt-3">
             <Input
+              ref={inputRef}
               placeholder="Type your message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -415,7 +426,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
           <CardHeader>
             <CardTitle className="text-lg">Your Plan</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Shared with 4 other users (pod of 5)
+              Shared with 4 other users (circle of 5)
             </p>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">

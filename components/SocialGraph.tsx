@@ -44,7 +44,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
   const [matchExplanation, setMatchExplanation] = useState<MatchExplanation | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GraphNode } | null>(null);
   const [linkThreshold, setLinkThreshold] = useState(0.2);
-  const [highlightPod, setHighlightPod] = useState(false);
+  const [highlightCircle, setHighlightCircle] = useState(false);
   const graphRef = useRef<any>();
   const glowTextureRef = useRef<THREE.Texture | null>(null);
   const sphereGeometryRef = useRef(new THREE.SphereGeometry(1, 24, 24));
@@ -138,7 +138,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
     if (!graphData) return;
 
     setSelectedNode(node);
-    setHighlightPod(true);
+    setHighlightCircle(true);
 
     // Find top 5 matches (nodes connected to this one, sorted by link strength)
     const connectedLinks = graphData.links.filter(link => {
@@ -204,43 +204,43 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
     return `rgba(195,206,148,${alpha})`;
   }, [getLinkNodeId, selectedNode]);
 
-  const podNodeIds = useMemo(() => {
+  const circleNodeIds = useMemo(() => {
     if (!selectedNode || topMatches.length === 0) return new Set<string>();
     return new Set([selectedNode.id, ...topMatches.map(match => match.node.id)]);
   }, [selectedNode, topMatches]);
 
-  const podMembers = useMemo(() => {
+  const circleMembers = useMemo(() => {
     if (!selectedNode) return [];
     const members = [selectedNode, ...topMatches.map(match => match.node)];
     return members.slice(0, 5);
   }, [selectedNode, topMatches]);
 
-  const podCohesion = useMemo(() => {
-    if (!graphData || podMembers.length < 2) return null;
-    const podIds = new Set(podMembers.map(member => member.id));
-    const podLinks = graphData.links.filter(link => {
+  const circleCohesion = useMemo(() => {
+    if (!graphData || circleMembers.length < 2) return null;
+    const circleIds = new Set(circleMembers.map(member => member.id));
+    const circleLinks = graphData.links.filter(link => {
       const sourceId = getLinkNodeId(link, 'source');
       const targetId = getLinkNodeId(link, 'target');
-      return podIds.has(sourceId) && podIds.has(targetId);
+      return circleIds.has(sourceId) && circleIds.has(targetId);
     });
-    if (!podLinks.length) return null;
-    const avg = podLinks.reduce((sum, link) => sum + (link.strength || 0), 0) / podLinks.length;
+    if (!circleLinks.length) return null;
+    const avg = circleLinks.reduce((sum, link) => sum + (link.strength || 0), 0) / circleLinks.length;
     return avg;
-  }, [getLinkNodeId, graphData, podMembers]);
+  }, [getLinkNodeId, graphData, circleMembers]);
 
   const getNodeTone = useCallback((node: GraphNode) => {
     const isSelected = selectedNode && node.id === selectedNode.id;
     const isHovered = hoveredNode && node.id === hoveredNode.id;
-    const isPod = highlightPod && podNodeIds.has(node.id);
+    const isCircle = highlightCircle && circleNodeIds.has(node.id);
     const isFocus = focusNodeId && node.id === focusNodeId;
-    if (isSelected) return { color: '#e7f0b8', glow: 0.9, sizeBoost: 2.2 };
-    if (isHovered) return { color: '#f1f6d7', glow: 0.7, sizeBoost: 1.4 };
-    if (isPod) return { color: '#cfe0a1', glow: 0.55, sizeBoost: 1.1 };
-    if (isFocus) return { color: '#7ef3ff', glow: 0.75, sizeBoost: 1.4 };
-    const colors = ['#c3ce94', '#aab874', '#92a45f', '#7a904b', '#6a7d3f', '#576636'];
+    if (isSelected) return { color: '#2c3b2a', glow: 0.5, sizeBoost: 2.2 };
+    if (isHovered) return { color: '#2f4630', glow: 0.4, sizeBoost: 1.4 };
+    if (isCircle) return { color: '#374f36', glow: 0.35, sizeBoost: 1.1 };
+    if (isFocus) return { color: '#314335', glow: 0.4, sizeBoost: 1.4 };
+    const colors = ['#1f2a22', '#243326', '#2a3a2c', '#2e4131', '#324736', '#2a3a2e'];
     const color = colors[node.clusterId % colors.length] || '#6b7280';
     return { color, glow: 0.35, sizeBoost: 1 };
-  }, [focusNodeId, highlightPod, hoveredNode, podNodeIds, selectedNode]);
+  }, [circleNodeIds, focusNodeId, highlightCircle, hoveredNode, selectedNode]);
 
   const getNodeBaseSize = useCallback((node: GraphNode) => {
     const base = 2.6 + (node.traits?.extraversion || 0) * 1.8;
@@ -421,7 +421,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
 
   useEffect(() => {
     updateNodeVisuals();
-  }, [selectedNode, hoveredNode, highlightPod, podNodeIds, updateNodeVisuals]);
+  }, [selectedNode, hoveredNode, highlightCircle, circleNodeIds, updateNodeVisuals]);
 
 
   if (loading) {
@@ -464,12 +464,9 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                 <span className="font-medium text-foreground">Embedding</span> places everyone by learned similarity coordinates.
               </div>
             </div>
-            <div className="relative h-[calc(100vh-200px)] min-h-[520px] w-full overflow-hidden rounded-none border-0 bg-gradient-to-b from-background via-background to-black/90 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_20%,rgba(195,206,148,0.12),transparent_60%)]" />
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_50%,transparent_0%,rgba(0,0,0,0.55)_70%,rgba(0,0,0,0.85)_100%)]" />
-              <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(rgba(195,206,148,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(195,206,148,0.2)_1px,transparent_1px)] bg-[size:44px_44px]" />
+            <div className="relative h-[calc(100vh-200px)] min-h-[560px] w-full overflow-hidden rounded-none border-0 bg-transparent -ml-6">
 
-              <div className="absolute left-4 top-4 z-10 rounded-xl border border-border bg-background/70 px-3 py-2 text-xs text-foreground">
+              <div className="absolute left-6 top-4 z-10 rounded-xl border border-border/40 bg-background/70 px-3 py-2 text-xs text-foreground">
                 <div className="font-semibold">Legend</div>
                 <div className="mt-2 flex flex-col gap-1">
                   <span className="flex items-center gap-2">
@@ -479,12 +476,12 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                     <span className="h-2 w-2 rounded-full bg-[#7ef3ff]" />You
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[#cfe0a1]" />Pod
+                    <span className="h-2 w-2 rounded-full bg-[#cfe0a1]" />Circle
                   </span>
                 </div>
               </div>
 
-              <div className="absolute right-4 top-4 z-10 flex flex-col gap-3 rounded-xl border border-border bg-background/70 p-3 text-xs text-foreground">
+              <div className="absolute right-4 top-4 z-10 flex flex-col gap-3 rounded-xl border border-border/40 bg-background/70 p-3 text-xs text-foreground">
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -528,11 +525,11 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                   <Button
                     type="button"
                     size="sm"
-                    variant={highlightPod ? 'default' : 'outline'}
-                    onClick={() => setHighlightPod(prev => !prev)}
+                    variant={highlightCircle ? 'default' : 'outline'}
+                    onClick={() => setHighlightCircle(prev => !prev)}
                     disabled={!selectedNode}
                   >
-                    Highlight pod
+                    Highlight circle
                   </Button>
                   <Button
                     type="button"
@@ -544,7 +541,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                   </Button>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  Highlight pod shows the circle of 5. Reset camera recenters the view.
+                  Highlight circle shows the circle of 5. Reset camera recenters the view.
                 </div>
               </div>
 
@@ -557,9 +554,9 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                   nodeThreeObjectExtend
                   linkSource="source"
                   linkTarget="target"
-                  linkOpacity={selectedNode ? 0.15 : 0.3}
-                  linkWidth={selectedNode ? 2 : 1}
-                  linkColor={(link: any) => getLinkColor(link)}
+                  linkOpacity={selectedNode ? 0.12 : 0.22}
+                  linkWidth={selectedNode ? 1.6 : 0.8}
+                  linkColor={() => 'rgba(46,62,45,0.65)'}
                   onNodeHover={(node: any, event: any) => handleNodeHover(node, event as MouseEvent)}
                   onNodeClick={(node: any) => {
                     handleNodeClick(node);
@@ -605,7 +602,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
         {selectedNode && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-lg">Pod circle (5)</CardTitle>
+              <CardTitle className="text-lg">Circle (5)</CardTitle>
               <button
                 onClick={() => {
                   setSelectedNode(null);
@@ -657,18 +654,18 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
         {selectedNode && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Pod cohesion score</CardTitle>
+              <CardTitle className="text-lg">Circle cohesion score</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-2xl font-bold text-primary">
-                {podCohesion !== null
-                  ? `${(podCohesion * 100).toFixed(0)}%`
+                {circleCohesion !== null
+                  ? `${(circleCohesion * 100).toFixed(0)}%`
                   : '—'}
               </div>
               <div className="text-xs text-muted-foreground">
-                Average link strength across all connections inside the pod.
+                Average link strength across all connections inside the circle.
               </div>
-              <div className="text-xs text-muted-foreground">Why this pod fits</div>
+              <div className="text-xs text-muted-foreground">Why this circle fits</div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 {matchExplanation?.topContributors.slice(0, 3).map((contrib, idx) => (
                   <li key={idx} className="capitalize">
@@ -760,7 +757,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
  * 📄 FILE FOOTER: frontend/components/SocialGraph.tsx
  * ============================================================
  * PURPOSE:
- *    3D social graph view with pod-of-5 insights and view toggle.
+ *    3D social graph view with circle-of-5 insights and view toggle.
  * TECH USED:
  *    - react-force-graph-3d
  *    - React

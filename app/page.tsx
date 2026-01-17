@@ -17,18 +17,23 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useId, useMemo } from 'react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Globe, Settings, Sparkles } from 'lucide-react';
+import { MessageSquare, Globe, Settings, Sparkles, Compass } from 'lucide-react';
 import ChatInterface from '@/components/ChatInterface';
 import SocialGraph from '@/components/SocialGraph';
 import TunerDashboard from '@/components/TunerDashboard';
+import NextStep from '@/components/NextStep';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
-  const [sessionUserId] = useState(() => `user_demo_${Date.now()}`);
+  const reactId = useId();
+  const sessionUserId = useMemo(
+    () => `user_demo_${reactId.replace(/[:]/g, '')}`,
+    [reactId]
+  );
 
   const handleProfileUpdate = () => {
     // Trigger graph refresh when chat updates profile
@@ -36,7 +41,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background page-bounce">
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -60,13 +65,9 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <div
-        className={`w-full ${
-          activeTab === 'space' ? 'max-w-none px-0 pt-4 pb-0' : 'max-w-7xl mx-auto p-6'
-        }`}
-      >
+      <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="chat" className="flex items-center gap-2 shadow-md">
               <MessageSquare className="h-4 w-4" />
               Chat
@@ -79,13 +80,21 @@ export default function Home() {
               <Settings className="h-4 w-4" />
               Tuner
             </TabsTrigger>
+            <TabsTrigger value="next" className="flex items-center gap-2">
+              <Compass className="h-4 w-4" />
+              Next Step
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="mt-6">
             <ChatInterface userId={sessionUserId} onProfileUpdate={handleProfileUpdate} />
           </TabsContent>
 
-          <TabsContent value="space" className="mt-0 w-full px-0 pb-6">
+          <TabsContent value="next" className="mt-6">
+            <NextStep />
+          </TabsContent>
+
+          <TabsContent value="space" className="mt-6">
             <SocialGraph key={graphRefreshKey} focusUserId={sessionUserId} />
           </TabsContent>
 
@@ -95,9 +104,6 @@ export default function Home() {
         </Tabs>
       </div>
 
-      <footer className="border-t border-border px-6 py-6 text-xs text-muted-foreground">
-        <div className="max-w-7xl mx-auto" />
-      </footer>
     </main>
   );
 }

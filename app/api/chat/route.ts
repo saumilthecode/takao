@@ -37,7 +37,7 @@ type SessionState = {
 const sessionStore = new Map<string, SessionState>();
 const FIXED_ITINERARY = {
   wednesday_study: {
-    theme: 'Focused study pod',
+    theme: 'Focused study circle',
     location_hint: 'Tutorial Room 79, NUS RC',
     plan: ['Arrive by 4pm', 'Study sprints + quick intros', 'Wrap at 7pm']
   },
