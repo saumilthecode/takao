@@ -111,8 +111,11 @@ function isRepeatQuestion(candidate: string, recentQuestions: string[]): boolean
   if (candidateBigrams.size === 0) return false;
   return recentQuestions.some(question => {
     const questionBigrams = new Set(getBigrams(question));
-    const intersection = [...candidateBigrams].filter(bigram => questionBigrams.has(bigram));
-    const overlap = intersection.length / Math.max(candidateBigrams.size, 1);
+    let intersectionCount = 0;
+    candidateBigrams.forEach(bigram => {
+      if (questionBigrams.has(bigram)) intersectionCount += 1;
+    });
+    const overlap = intersectionCount / Math.max(candidateBigrams.size, 1);
     return overlap >= 0.5;
   });
 }
