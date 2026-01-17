@@ -31,6 +31,9 @@ const openai = new OpenAI({
   apiKey: process.env.openaikey || process.env.OPENAI_API_KEY || ''
 });
 
+const EMBEDDING_DIM = 16;
+const embeddingCache = new Map<string, number[]>();
+
 // Type definitions
 export interface ProfileUpdate {
   traits: {
@@ -56,6 +59,44 @@ export interface SignalResponse {
   confidence: number;
   done: boolean;
   itinerary?: Itinerary;
+}
+
+function normalizeVector(vector: number[]): number[] {
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (!norm) return vector;
+  return vector.map(value => value / norm);
+}
+
+function hashEmbedding(text: string): number[] {
+  const clean = text.toLowerCase().trim();
+  const values = new Array(EMBEDDING_DIM).fill(0);
+  for (let i = 0; i < clean.length; i += 1) {
+    const code = clean.charCodeAt(i);
+    values[i % EMBEDDING_DIM] += (code % 31) / 31;
+  }
+  return normalizeVector(values);
+}
+
+export async function getTextEmbedding(text: string): Promise<number[]> {
+  const key = text.toLowerCase().trim();
+  if (!key) return new Array(EMBEDDING_DIM).fill(0);
+  const cached = embeddingCache.get(key);
+  if (cached) return cached;
+
+  try {
+    const response = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: key
+    });
+    const embedding = response.data[0]?.embedding?.slice(0, EMBEDDING_DIM) ?? [];
+    const normalized = embedding.length ? normalizeVector(embedding) : hashEmbedding(key);
+    embeddingCache.set(key, normalized);
+    return normalized;
+  } catch (error) {
+    const fallback = hashEmbedding(key);
+    embeddingCache.set(key, fallback);
+    return fallback;
+  }
 }
 
 export interface SessionContext {

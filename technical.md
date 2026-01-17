@@ -76,7 +76,9 @@ Legend:
 ## 4.1 Vector construction
 
 ✓ A fixed mapping from profileUpdate → numeric vector
-☐ Vector normalization (unit norm / L2 normalize)
+✓ Vector normalization (unit norm / L2 normalize)
+✓ Text embeddings for messages or interests
+✓ Interest embeddings averaged into the user vector
 
 ## 4.2 State update
 
@@ -133,8 +135,8 @@ Legend:
 ☐ Inspector shows:
   ☐ similarity score(s)
   ☐ cohesion score
-  ☐ top contributing trait dimensions
-  ☐ shared interest tags / overlaps
+  ✓ top contributing trait/interest dimensions
+  ✓ shared interest tags / overlaps
 
 ## 8.2 “Not AI sorting” proof
 
@@ -161,8 +163,8 @@ Legend:
 
 # 10) Clustering (optional but on-brand)
 
-☐ Clustering run exists (DBSCAN/HDBSCAN or placeholder)
-☐ `clusterId` assigned to each node
+✓ Clustering run exists (DBSCAN/HDBSCAN or placeholder)
+✓ `clusterId` assigned to each node
 ✓ Nodes colored by `clusterId`
 ☐ Optional: cluster bonus used in pod cohesion scoring
 
