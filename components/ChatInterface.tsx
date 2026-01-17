@@ -219,7 +219,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSimulate} disabled={isLoading}>
+            <Button variant="default" size="sm" onClick={handleSimulate} disabled={isLoading}>
               <Play className="h-4 w-4 mr-2" />
               Demo
             </Button>
@@ -316,7 +316,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
               onClick={handleSend} 
               disabled={isLoading || !input.trim()}
               size="icon"
-              className="shrink-0"
+              className="shrink-0 opacity-100"
             >
               <Send className="h-4 w-4" />
             </Button>

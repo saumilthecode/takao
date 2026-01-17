@@ -51,7 +51,7 @@ export default function Home() {
             >
               About
             </Link>
-            <span className="rounded-md bg-black px-2 py-1 text-xs font-semibold text-primary-foreground">
+            <span className="rounded-md bg-black px-2 py-1 text-xs font-semibold text-primary-foreground opacity-100">
               Demo Mode
             </span>
           </div>

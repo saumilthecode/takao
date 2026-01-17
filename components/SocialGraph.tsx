@@ -55,8 +55,8 @@ export default function SocialGraph() {
       // Filter out links that reference non-existent nodes
       const nodeIds = new Set(data.nodes.map(n => n.id));
       const validLinks = data.links.filter(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        const sourceId = (link as any).source?.id ?? link.source;
+        const targetId = (link as any).target?.id ?? link.target;
         return nodeIds.has(sourceId) && nodeIds.has(targetId);
       });
       
@@ -71,14 +71,23 @@ export default function SocialGraph() {
     }
   };
 
+  const getLinkNodeId = useCallback((link: any, key: 'source' | 'target') => {
+    const value = link?.[key];
+    if (value && typeof value === 'object') {
+      return value.id as string;
+    }
+    return value as string;
+  }, []);
+
   // Handle node hover - show tooltip
-  const handleNodeHover = useCallback((node: GraphNode | null, event?: MouseEvent) => {
+  const handleNodeHover = useCallback((node: any, event?: MouseEvent) => {
     if (node && event) {
-      setHoveredNode(node);
+      const typedNode = node as GraphNode;
+      setHoveredNode(typedNode);
       setTooltip({
         x: event.clientX,
         y: event.clientY,
-        node
+        node: typedNode
       });
     } else {
       setHoveredNode(null);
@@ -95,15 +104,15 @@ export default function SocialGraph() {
 
     // Find top 5 matches (nodes connected to this one, sorted by link strength)
     const connectedLinks = graphData.links.filter(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const sourceId = getLinkNodeId(link, 'source');
+      const targetId = getLinkNodeId(link, 'target');
       return sourceId === node.id || targetId === node.id;
     });
 
     const matches = connectedLinks
       .map(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-        const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+        const sourceId = getLinkNodeId(link, 'source');
+        const targetId = getLinkNodeId(link, 'target');
         const otherId = sourceId === node.id ? targetId : sourceId;
         const otherNode = graphData.nodes.find(n => n.id === otherId);
         return otherNode ? { node: otherNode, similarity: link.strength } : null;
@@ -138,20 +147,20 @@ export default function SocialGraph() {
   };
 
   // Update link opacity based on selection
-  const getLinkOpacity = useCallback((link: GraphLink) => {
+  const getLinkOpacity = useCallback((link: any) => {
     if (!selectedNode) return 0.3;
-    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    const sourceId = getLinkNodeId(link, 'source');
+    const targetId = getLinkNodeId(link, 'target');
     return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 1 : 0.1;
-  }, [selectedNode]);
+  }, [getLinkNodeId, selectedNode]);
 
   // Update link width based on selection
-  const getLinkWidth = useCallback((link: GraphLink) => {
+  const getLinkWidth = useCallback((link: any) => {
     if (!selectedNode) return 1;
-    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    const sourceId = getLinkNodeId(link, 'source');
+    const targetId = getLinkNodeId(link, 'target');
     return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 3 : 0.5;
-  }, [selectedNode]);
+  }, [getLinkNodeId, selectedNode]);
 
   const podNodeIds = useMemo(() => {
     if (!selectedNode || topMatches.length === 0) return new Set<string>();
@@ -162,8 +171,8 @@ export default function SocialGraph() {
     if (!graphData) return null;
     const linkBuckets = new Map<string, GraphLink[]>();
     graphData.links.forEach(link => {
-      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
-      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const sourceId = getLinkNodeId(link, 'source');
+      const targetId = getLinkNodeId(link, 'target');
       if (!linkBuckets.has(sourceId)) linkBuckets.set(sourceId, []);
       if (!linkBuckets.has(targetId)) linkBuckets.set(targetId, []);
       linkBuckets.get(sourceId)?.push(link);
@@ -187,7 +196,7 @@ export default function SocialGraph() {
       ...graphData,
       links: filteredLinks
     };
-  }, [graphData, linkThreshold]);
+  }, [getLinkNodeId, graphData, linkThreshold]);
 
   useEffect(() => {
     if (!filteredGraphData || !graphRef.current) return;
@@ -230,7 +239,7 @@ export default function SocialGraph() {
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               3D Social Graph
-              <Badge variant="outline" className="text-xs">Dev/UAT</Badge>
+              <Badge className="text-xs bg-black text-primary-foreground">Dev/UAT</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -330,13 +339,13 @@ export default function SocialGraph() {
                   }}
                   linkSource="source"
                   linkTarget="target"
-                  linkOpacity={getLinkOpacity}
-                  linkWidth={getLinkWidth}
+                  linkOpacity={selectedNode ? 0.15 : 0.3}
+                  linkWidth={selectedNode ? 2 : 1}
                   linkColor={(link: any) => {
                     const strength = link?.strength ?? 0.2;
                     return `rgba(195,206,148,${Math.min(0.5, Math.max(0.12, strength))})`;
                   }}
-                  onNodeHover={handleNodeHover}
+                  onNodeHover={(node: any, event: any) => handleNodeHover(node, event as MouseEvent)}
                   onNodeClick={(node: any) => {
                     handleNodeClick(node);
                     graphRef.current?.cameraPosition(

@@ -26,34 +26,29 @@ export default function About() {
 
         <div className="space-y-5 text-base leading-relaxed">
           <p>
-            Apps like Bumble BFF and offline events such as Timeleft and WeAreNeverReallyStrangers
-            promised a better way to make friends. And for a while, it felt like there was: swipe
-            right till you drop, match till you become a matchstick. Group chats where no one
-            talked, a cemetery of what a friendship could have been. The friend-finder apps felt
-            full of promise.
+            Apps like Bumble BFF and offline events such as Timeleft and weAreNeverReallyStrangers
+            promised a better way to make friends. Friend-finder apps full of promise.
           </p>
 
           <p>But the loneliness epidemic rages on.</p>
 
           <p>
-            Visions of real, diverse connections gave way to a new bundle of people who genuinely
-            believe in the idea of helping you make friends. A dozen apps produced by small
-            companies became huge players in the market today. Weren&apos;t they supposed to solve our
+            Visions of a real connection gave way to a people who genuinely
+            wanted to help you make a friend. A dozen apps produced by small
+            companies have become huge players in the market today. Weren&apos;t they supposed to solve our
             loneliness? If they did, why do they still exist - how do they drive revenue and even
             IPO?
           </p>
 
           <p>
-            You get endless swipes, ghosting, forced retention. And so, we pick our clothes. Our
+            You get endless swipes, ghosting, abundance of choice, sunk-cost hope that maybe you find the one who finally goes above and beyond. And so, we pick our clothes. Our
             tunes. Our furniture. But our friends? They&apos;re still one-size-fits-all. Swipe till you
             drop. Made for billions. Not for us.
           </p>
 
           <p>
-            When friendship software is oriented around you, it&apos;s freed from dark patterns. If
-            they solved friendship, why do they still exist? Dark patterns: swipes, ghosting,
-            abundance of choice, sunk-cost hope for the one that finally goes above and beyond for
-            you.
+            When friendship software is oriented around you, it&apos;s freed from these dark patterns. 
+            
           </p>
 
           <p>
@@ -62,16 +57,18 @@ export default function About() {
           </p>
 
           <p>
-            That&apos;s why we built Takoa. The first personal friendship platform. No generic
-            personality quizzes. Converse naturally; we learn your life, context, vibe. Science-backed
-            algorithms (AI-free matching, fixed logic, no bias) generate your perfect questions,
+            That&apos;s why we built Takoa. The first personal friendship platform. 
+          </p>
+          <p>
+            No generic personality quizzes. Converse naturally; we learn your life, context, vibe. Science-backed
+            algorithms generate your perfect questions,
             craft a custom itinerary, and group you with four others for a real meetup. Persistent
             memory makes every connection click. Not just another friend-finder... but this time,
             one for you.
           </p>
 
           <p>
-            We use a backed-by-science algorithm and AI learns you - generating the best questions
+            We use a backed-by-science algorithm - generating the best questions
             for you, building a custom itinerary, then matching you with four others for a real
             meetup. Here&apos;s where we are very careful: no part of AI touches the connections you
             can potentially make. Everything is sorted by algorithms, fixed logic free from
@@ -79,18 +76,17 @@ export default function About() {
           </p>
 
           <p>
-            Our point? Not repeat users. This isn&apos;t business - it&apos;s a venture. Ours to create,
-            yours to explore a new way of making friends. Love is the only serious business on
+            Our point? Not repeat users. This isn&apos;t business - it&apos;s a venture. A venture into helping you get the love and support you deserve. Love(platonic) is the only serious business at
             Takoa.
           </p>
 
           <p>
             What will these bonds become? Hard to say. We don&apos;t know you yet. But someday, we&apos;ll
             look back on friend-finder apps like cable TV - mass content for the masses, with a
-            slice of superficiality as you see the person&apos;s face. A new era of connection is here.
-            As YouTube freed video, Twitch freed live - Takoa frees friendship. Made for all of us,
-            by all of us. Takoa. Even our name isn&apos;t easy to pronounce; we really don&apos;t want to be
-            a returning customer.
+            slice of superficiality. A new era of connection is here.
+          </p>
+          <p>
+            Takoa. Even our name isn&apos;t easy to pronounce or spell; we really don&apos;t want returning users.
           </p>
         </div>
       </section>
