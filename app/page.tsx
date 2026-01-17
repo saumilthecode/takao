@@ -28,6 +28,7 @@ import TunerDashboard from '@/components/TunerDashboard';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
+  const [sessionUserId] = useState(() => `user_demo_${Date.now()}`);
 
   const handleProfileUpdate = () => {
     // Trigger graph refresh when chat updates profile
@@ -77,11 +78,11 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="chat" className="mt-6">
-            <ChatInterface onProfileUpdate={handleProfileUpdate} />
+            <ChatInterface userId={sessionUserId} onProfileUpdate={handleProfileUpdate} />
           </TabsContent>
 
           <TabsContent value="space" className="mt-6">
-            <SocialGraph key={graphRefreshKey} />
+            <SocialGraph key={graphRefreshKey} focusUserId={sessionUserId} />
           </TabsContent>
 
           <TabsContent value="tuner" className="mt-6">

@@ -50,15 +50,13 @@ const FIRST_NAMES = [
 ];
 
 const LAST_NAMES = [
-  'Tan', 'Patel', 'Kim', 'Garcia', 'Chen', 'Müller', 'Johnson', 'Lee',
-  'Williams', 'Brown', 'Jones', 'Davis', 'Wilson', 'Martinez', 'Anderson',
-  'Taylor', 'Thomas', 'Moore', 'Jackson', 'White', 'Harris', 'Martin'
+  'Tan', 'Lim', 'Ng', 'Wong', 'Lee', 'Goh', 'Ong', 'Teo', 'Chua', 'Chong',
+  'Koh', 'Yeo', 'Ho', 'Loh', 'Neo', 'Seah', 'Toh', 'Quek', 'Low', 'Ang',
+  'Chew', 'Kwan', 'Lau', 'Phua', 'Sim', 'Foo', 'Heng', 'Peh', 'Yap', 'Soh'
 ];
 
 const UNIVERSITIES = [
-  'NUS', 'NTU', 'SMU', 'SUTD', 'SIT', 
-  'Stanford', 'MIT', 'Berkeley', 'CMU', 'Harvard',
-  'Imperial', 'Oxford', 'Cambridge', 'ETH Zurich', 'TUM'
+  'NUS', 'NTU', 'SMU', 'SUTD', 'SIT', 'SUSS', 'LASALLE', 'NAFA'
 ];
 
 const INTERESTS = [
@@ -67,14 +65,34 @@ const INTERESTS = [
   'reading', 'hiking', 'photography', 'cooking', 'music', 'gaming',
   'fitness', 'travel', 'art', 'writing', 'podcasts', 'movies',
   'startups', 'investing', 'philosophy', 'psychology', 'languages',
-  'volunteering', 'hackathons', 'open source', 'research', 'teaching'
+  'volunteering', 'hackathons', 'open source', 'research', 'teaching',
+  'hawker food', 'cafe hopping', 'makan adventures', 'board games',
+  'badminton', 'basketball', 'futsal', 'running', 'cycling',
+  'mahjong', 'karaoke', 'k-pop', 'anime', 'photowalks',
+  'design', 'product management', 'fintech', 'sustainability'
 ];
 
 /**
- * Generate a random number between min and max with optional skew
+ * Generate a random number between min and max.
  */
 function randomBetween(min: number, max: number): number {
   return Math.random() * (max - min) + min;
+}
+
+/**
+ * Rough normal-ish distribution using Box-Muller.
+ */
+function randomNormal(mean: number, stdDev: number): number {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return mean + num * stdDev;
+}
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, val));
 }
 
 /**
@@ -92,13 +110,20 @@ function generateUser(index: number): User {
   const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
   const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
   
-  // Generate Big-5 traits (normalized 0-1)
+  // Generate Big-5 traits (normalized 0-1) with mild correlations + noise
+  const openness = clamp(randomNormal(0.58, 0.18), 0.05, 0.98);
+  const conscientiousness = clamp(randomNormal(0.55, 0.17), 0.05, 0.97);
+  const extraversion = clamp(randomNormal(0.48, 0.22), 0.02, 0.98);
+  const agreeableness = clamp(randomNormal(0.6, 0.16), 0.08, 0.98);
+  const neuroticismBase = 0.55 - conscientiousness * 0.25 + (0.5 - extraversion) * 0.15;
+  const neuroticism = clamp(randomNormal(neuroticismBase, 0.18), 0.02, 0.95);
+
   const traits = {
-    openness: randomBetween(0.2, 0.95),
-    conscientiousness: randomBetween(0.2, 0.95),
-    extraversion: randomBetween(0.1, 0.9),
-    agreeableness: randomBetween(0.3, 0.95),
-    neuroticism: randomBetween(0.1, 0.8)
+    openness,
+    conscientiousness,
+    extraversion,
+    agreeableness,
+    neuroticism
   };
 
   // Vector is just the traits as array
@@ -110,15 +135,30 @@ function generateUser(index: number): User {
     traits.neuroticism
   ];
 
+  const age = Math.floor(clamp(randomNormal(21.2, 1.8), 18, 26));
+  const confidence = clamp(randomNormal(0.72, 0.15), 0.3, 0.98);
+
+  // Interests: smaller, noisier set for realism, with occasional sparse profiles
+  const interestCount = Math.random() < 0.15
+    ? Math.floor(randomBetween(1, 3))
+    : Math.floor(randomBetween(3, 7));
+
+  let interests = pickRandom(INTERESTS, interestCount);
+
+  // Add a small chance of "messy" or niche interest combos
+  if (Math.random() < 0.2) {
+    interests = pickRandom(INTERESTS, Math.floor(randomBetween(2, 5)));
+  }
+
   return {
     id: `user_${index.toString().padStart(3, '0')}`,
     name: `${firstName} ${lastName}`,
-    age: Math.floor(randomBetween(18, 26)),
+    age,
     uni: UNIVERSITIES[Math.floor(Math.random() * UNIVERSITIES.length)],
     vector,
     traits,
-    interests: pickRandom(INTERESTS, Math.floor(randomBetween(3, 8))),
-    confidence: randomBetween(0.5, 1.0)
+    interests,
+    confidence
   };
 }
 

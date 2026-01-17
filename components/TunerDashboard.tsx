@@ -41,7 +41,12 @@ export default function TunerDashboard() {
             <Settings className="h-5 w-5" />
             Index Tuner Dashboard
           </CardTitle>
-          <Button size="sm" onClick={handleRunTrials} disabled={isRunning}>
+          <Button
+            size="sm"
+            onClick={handleRunTrials}
+            disabled={isRunning}
+            className="bg-black text-white hover:bg-black/90"
+          >
             {isRunning ? 'Running...' : 'Run 10 trials'}
           </Button>
         </div>
