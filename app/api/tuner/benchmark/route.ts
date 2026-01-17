@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureInitialized } from '@/src/init';
 import { runBenchmark, getBestConfig } from '@/src/services/tuner';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   await ensureInitialized();
   try {
