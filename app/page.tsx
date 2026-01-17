@@ -18,6 +18,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Globe, Settings, Sparkles } from 'lucide-react';
 import ChatInterface from '@/components/ChatInterface';
@@ -43,8 +44,14 @@ export default function Home() {
             <h1 className="text-xl font-bold">Takoa</h1>
             <span className="text-muted-foreground text-sm ml-2">Find Your People</span>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Demo Mode
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Link
+              href="/about"
+              className="transition-colors hover:text-foreground"
+            >
+              About
+            </Link>
+            <span>Demo Mode</span>
           </div>
         </div>
       </header>

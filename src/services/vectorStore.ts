@@ -42,6 +42,38 @@ let currentConfig = {
   efSearch: 100
 };
 
+type Traits = {
+  openness: number;
+  conscientiousness: number;
+  extraversion: number;
+  agreeableness: number;
+  neuroticism: number;
+};
+
+export type ProfileUpdate = {
+  traits: Traits;
+  interests: Record<string, number>;
+  confidence: number;
+};
+
+const DEFAULT_TRAITS: Traits = {
+  openness: 0.5,
+  conscientiousness: 0.5,
+  extraversion: 0.5,
+  agreeableness: 0.5,
+  neuroticism: 0.5
+};
+
+const SIGNAL_TO_TRAIT_WEIGHTS: Record<string, Partial<Traits>> = {
+  spontaneity: { openness: 0.4, conscientiousness: -0.5 },
+  planning_preference: { conscientiousness: 0.5 },
+  social_energy: { extraversion: 0.6 },
+  curiosity: { openness: 0.6 },
+  introspection: { openness: 0.2, extraversion: -0.3 },
+  nature_orientation: { openness: 0.2, agreeableness: 0.2 },
+  novelty_seeking: { openness: 0.5 }
+};
+
 /**
  * Initialize the vector store from all users
  */
@@ -155,6 +187,52 @@ export async function updateUserVector(
     // New user
     vectorIndex.set(userId, newVector);
   }
+}
+
+/**
+ * Map conversational signals to a small, gradual trait update.
+ */
+export function buildProfileUpdateFromSignals(
+  userId: string,
+  signals: Record<string, number>,
+  confidence: number
+): ProfileUpdate {
+  const user = getUserById(userId);
+  const baseTraits = user?.traits || DEFAULT_TRAITS;
+  const traitDeltas: Traits = {
+    openness: 0,
+    conscientiousness: 0,
+    extraversion: 0,
+    agreeableness: 0,
+    neuroticism: 0
+  };
+
+  for (const [signal, value] of Object.entries(signals || {})) {
+    const weights = SIGNAL_TO_TRAIT_WEIGHTS[signal];
+    if (!weights) continue;
+    for (const [trait, weight] of Object.entries(weights)) {
+      traitDeltas[trait as keyof Traits] += value * (weight ?? 0);
+    }
+  }
+
+  const step = clamp(confidence, 0, 1) * 0.2;
+  const traits: Traits = {
+    openness: clamp(baseTraits.openness + traitDeltas.openness * step, 0, 1),
+    conscientiousness: clamp(baseTraits.conscientiousness + traitDeltas.conscientiousness * step, 0, 1),
+    extraversion: clamp(baseTraits.extraversion + traitDeltas.extraversion * step, 0, 1),
+    agreeableness: clamp(baseTraits.agreeableness + traitDeltas.agreeableness * step, 0, 1),
+    neuroticism: clamp(baseTraits.neuroticism + traitDeltas.neuroticism * step, 0, 1)
+  };
+
+  return {
+    traits,
+    interests: {},
+    confidence: clamp(confidence, 0, 1)
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 /**

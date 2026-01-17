@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
     
     // Return pre-scripted demo conversation
     const demoConversation = [
-      { role: 'assistant' as const, content: "Hey! I'm here to help you find your people on campus. What do you usually do when you have free time?" },
+      { role: 'assistant' as const, content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?" },
       { role: 'user' as const, content: "I like reading, mostly sci-fi and tech blogs. Sometimes I go to hackathons." },
-      { role: 'assistant' as const, content: "Nice! A fellow techie. Do you prefer working on projects solo or jamming with others?" },
+      { role: 'assistant' as const, content: "Nice. Do you prefer working on projects solo or jamming with others?" },
       { role: 'user' as const, content: "I like small groups, like 2-3 people max. Big crowds drain me." },
-      { role: 'assistant' as const, content: "Totally get that. When you hang out with friends, what's your ideal vibe - chill at home, explore new cafes, or something active?" },
+      { role: 'assistant' as const, content: "That makes sense. When you hang out with friends, what's your ideal vibe - chill at home, explore new cafes, or something active?" },
       { role: 'user' as const, content: "Chill vibes for sure. Coffee shop study sessions are my thing." }
     ];
 

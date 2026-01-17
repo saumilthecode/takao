@@ -5,7 +5,7 @@
  * 
  * 🎯 PURPOSE:
  *    Chat UI for onboarding conversations.
- *    User talks to bot, bot extracts personality traits.
+ *    User talks to bot, bot extracts conversational signals.
  *    Shows real-time profile updates (vector visualization).
  * 
  * 🛠️ TECH USED:
@@ -45,7 +45,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: "Hey! 👋 I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
     }
   ]);
   const [input, setInput] = useState('');
@@ -53,15 +53,37 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
   const [profile, setProfile] = useState<ProfileUpdate | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingTimeouts = useRef<number[]>([]);
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  const clearPendingTimeouts = useCallback(() => {
+    pendingTimeouts.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+    pendingTimeouts.current = [];
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    return () => clearPendingTimeouts();
+  }, [clearPendingTimeouts]);
+
+  const scheduleAssistantMessages = useCallback((assistantMessages: string[]) => {
+    let delay = 0;
+    assistantMessages.forEach(message => {
+      const step = 400 + Math.random() * 400;
+      delay += step;
+      const timeoutId = window.setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'assistant', content: message }]);
+      }, delay);
+      pendingTimeouts.current.push(timeoutId);
+    });
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -74,7 +96,11 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
 
     try {
       const response = await sendChatMessage(SESSION_USER_ID, userMessage, messages);
-      setMessages(prev => [...prev, { role: 'assistant', content: response.assistantMessage }]);
+      const fallbackMessage = (response as { assistantMessage?: string }).assistantMessage;
+      const assistantMessages = response.assistantMessages?.length
+        ? response.assistantMessages
+        : [fallbackMessage || "Tell me more about that."];
+      scheduleAssistantMessages(assistantMessages);
       
       // Update profile with smooth transition
       if (response.profileUpdate) {
@@ -108,13 +134,14 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, onProfileUpdate]);
+  }, [input, isLoading, messages, onProfileUpdate, scheduleAssistantMessages]);
 
   const handleSimulate = useCallback(async () => {
     setIsLoading(true);
+    clearPendingTimeouts();
     setMessages([{
       role: 'assistant',
-      content: "Hey! 👋 I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
     }]);
     setProfile(null);
     try {
@@ -141,9 +168,10 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
   }, [onProfileUpdate]);
 
   const handleReset = useCallback(() => {
+    clearPendingTimeouts();
     setMessages([{
       role: 'assistant',
-      content: "Hey! 👋 I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
     }]);
     setProfile(null);
     setInput('');
@@ -245,10 +273,10 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            Your Profile
+            Your Signal Profile
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Real-time personality insights
+            Real-time signal insights
           </p>
         </CardHeader>
         <CardContent>
@@ -257,7 +285,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
               {/* Traits as bars */}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Personality Traits
+                  Trait Signals
                 </p>
                 {Object.entries(profile.traits).map(([trait, value]) => (
                   <div key={trait}>
@@ -301,7 +329,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
               {/* Confidence */}
               <div className="pt-3 border-t">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Profile Confidence</span>
+                  <span className="text-sm font-medium">Signal Confidence</span>
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-16 bg-secondary rounded-full overflow-hidden">
                       <div 
@@ -319,8 +347,8 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
           ) : (
             <div className="text-center text-muted-foreground py-12">
               <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">Start chatting to build your profile</p>
-              <p className="text-xs mt-2 opacity-75">The AI extracts personality traits from your responses</p>
+              <p className="text-sm font-medium">Start chatting to build your signal profile</p>
+              <p className="text-xs mt-2 opacity-75">We extract conversational signals from your responses</p>
             </div>
           )}
         </CardContent>
@@ -328,3 +356,15 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     </div>
   );
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: frontend/components/ChatInterface.tsx
+ * ============================================================
+ * PURPOSE:
+ *    Onboarding chat UI with delayed multi-bubble responses.
+ * TECH USED:
+ *    - React
+ *    - shadcn/ui
+ * ============================================================
+ */

@@ -94,7 +94,7 @@ Get your API key from: https://platform.openai.com/api-keys
 
 ## 🎬 Demo Features
 
-1. **Chat Onboarding** - LLM extracts personality traits with **RAG (Retrieval-Augmented Generation)**
+1. **Chat Onboarding** - LLM extracts conversational signals with **RAG (Retrieval-Augmented Generation)**
    - Retrieves similar users from vector store for context-aware responses
    - LLM understands community interests and personalities
 2. **3D Social Graph** - react-force-graph-3d visualization

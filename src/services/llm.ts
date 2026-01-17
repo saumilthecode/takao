@@ -5,7 +5,7 @@
  * 
  * 🎯 PURPOSE:
  *    Handles all OpenAI API interactions for the chatbot.
- *    Uses structured output to extract personality traits from chat.
+ *    Uses structured output to extract conversational signals from chat.
  *    The LLM is just a "friendly UI" - it doesn't decide matches.
  * 
  * 🛠️ TECH USED:
@@ -44,52 +44,132 @@ export interface ProfileUpdate {
   confidence: number;
 }
 
-export interface ChatResponse {
-  assistantMessage: string;
-  profileUpdate: ProfileUpdate;
+export interface Itinerary {
+  wednesday_study: { theme: string; location_hint: string; plan: string[] };
+  friday_social: { theme: string; location_hint: string; plan: string[]; optional: true };
+}
+
+export interface SignalResponse {
+  assistantMessages: string[];
+  nextTopic: string;
+  signals: Record<string, number>;
+  confidence: number;
+  done: boolean;
+  itinerary?: Itinerary;
+}
+
+export interface SessionContext {
+  asked_topics: string[];
+  collected_signals: string[];
+  stage: 'warmup' | 'preferences' | 'group-fit' | 'wrapup';
+  turn_count: number;
+  allowed_topics: string[];
 }
 
 // Base system prompt for the onboarding chatbot
-const BASE_SYSTEM_PROMPT = `You are an onboarding buddy for a friend-making app for university students (age 18–26).
-Your job is to have a friendly 5–10 minute conversation that helps the user express preferences and personality.
-You must NOT decide who the user should be matched with.
-You must only:
-(1) respond conversationally, and
-(2) extract a structured profile update from the user's messages.
+const BASE_SYSTEM_PROMPT = `You are a friendly onboarding buddy for a university social app.
+You are NOT a therapist and NOT an AI companion.
+You have one job: chat naturally and extract structured signals.
 
-Important rules:
-- No romance or dating framing.
-- Do not mention embeddings, vectors, clustering, or any internal algorithms.
-- Ask short, natural questions (1–2 at a time).
-- Avoid sensitive personal data (exact address, finances, medical, etc).
-- Keep it like a friendly peer chat.
+Core behavior:
+- Feel like a slightly playful peer (not therapist, not chatbot).
+- Ask follow-up questions naturally based on the user's last answer.
+- Probe how someone thinks, not just what they think.
+- Keep the conversation flowing (not "Q1, Q2, Q3").
+- Never decide matches.
+- Never reference embeddings, vectors, clustering, or matching logic.
 
-After every message, output a JSON object ONLY (no extra text) in this exact schema:
+Tone:
+- Friendly, warm, slightly playful.
+- Curious without interrogating.
+- Short replies (1–4 sentences).
+- No emojis, no slang overload.
 
+Conversation rules:
+- Do NOT ask a fixed list of questions.
+- Let each question emerge from the user's previous answer.
+- Ask unconventional, open-ended questions that reveal how they think and socialize.
+- Avoid sensitive personal data (finances, medical, exact address, etc).
+
+Your task each turn:
+1) Respond naturally to the user.
+2) Extract soft semantic signals from what the user said.
+
+You must ALWAYS output a single JSON object and nothing else:
 {
-  "assistantMessage": string,
-  "profileUpdate": {
-    "traits": {
-      "openness": number, 
-      "conscientiousness": number,
-      "extraversion": number,
-      "agreeableness": number,
-      "neuroticism": number
-    },
-    "interests": { "<tag>": number },
-    "confidence": number
+  "assistantMessages": [
+    "Oh that's interesting.",
+    "Btw-what do you think about XYZ?"
+  ],
+  "nextTopic": "planning",
+  "signals": {
+    "<signal_name>": number
+  },
+  "confidence": number
+}
+
+Signal rules:
+- Values are in [-0.5, +0.5].
+- Only include signals clearly implied.
+- If uncertain, include fewer signals with smaller magnitudes.
+- If nothing meaningful can be extracted, return an empty signals object and low confidence.
+- Each turn extracts max 3 signals.
+- Keep deltas small and gradual across turns.
+- Limit the overall signal vocabulary to 8-10 total (for example: spontaneity, planning_preference, social_energy, curiosity, introspection, nature_orientation, novelty_seeking).
+
+Return 1-3 short assistantMessages; each should be 1 sentence.
+The first message should react to the user.
+If you include a question, put it in the last message.
+
+Anti-repeat rule:
+- You will be given asked_topics and collected_signals.
+- Do NOT ask about any topic already in asked_topics.
+- Prefer questions that target signals not in collected_signals.
+- If the user already answered something, acknowledge it and move forward.
+
+You must include "nextTopic" chosen from the allowed list.
+Never repeat a nextTopic that is already in asked_topics.
+
+Hard boundaries (must follow):
+- You are NOT a therapist and must not provide mental-health counseling.
+- If the user asks for therapy, diagnosis, or emotional crisis support, respond briefly:
+  acknowledge + say you can't help with that + suggest they talk to a trusted person or campus support services.
+- Do NOT ask for or encourage sharing of sensitive personal data (exact address, phone number, finances, medical info, immigration status, etc).
+- If the user shares sensitive info, do not repeat it; gently steer back to safe topics.
+- No romance/dating framing; this is strictly friend-making.
+
+University-only + safety context:
+- Assume meetups are within university communities.
+- Default meetup location is on-campus public spaces.
+- Avoid suggesting private residences.
+
+Scheduling model (fixed cadence; no complex planning):
+- The app only forms pods of 5 and proposes two recurring meetup types:
+  1) Wednesday night: on-campus study session (default)
+  2) Friday night: optional drinks / casual hangout outside campus (only if they are comfortable)
+- Do not ask for exact availability or negotiate times; instead ask preference questions like:
+  "Are you more into a quiet study session or a social hang after?"
+  "Would you prefer Friday to be drinks, dessert, or just a chill chat?"
+
+Itinerary output behavior:
+- When you have enough confidence (confidence >= 0.75) OR after ~8-12 user messages, you must return an "itinerary" field
+  describing the two default meetups for the user's pod of 5.
+- The itinerary must be high-level and safe: only general locations (e.g., "campus library", "student lounge", "near campus").
+- The itinerary must NOT include addresses or personal contact info.
+{
+  "assistantMessages": ["...","..."],
+  "nextTopic": "planning",
+  "signals": { "spontaneity": 0.1 },
+  "confidence": 0.78,
+  "done": true,
+  "itinerary": {
+    "wednesday_study": { "theme": "...", "location_hint": "...", "plan": ["...","..."] },
+    "friday_social": { "theme": "...", "location_hint": "...", "plan": ["...","..."], "optional": true }
   }
 }
 
-Constraints:
-- trait values must be in [0,1]
-- interest weights must be in [0,1]
-- confidence must be in [0,1]
-- If unsure, keep profileUpdate small and confidence low.
-- Each turn should adjust values slightly, not jump wildly.
-
 Goal:
-Help the user naturally reveal what they enjoy doing, how they like to meet people, and what kind of group dynamic they prefer.`;
+Help the user feel understood through conversation while producing structured, explainable signals.`;
 
 /**
  * Retrieve similar users for RAG context
@@ -170,8 +250,10 @@ ${examples.map((ex, i) => `${i + 1}. ${ex.name} (${ex.age}, ${ex.uni}) - Interes
 export async function chatWithBot(
   userMessage: string,
   history: { role: 'user' | 'assistant'; content: string }[],
-  userId?: string
-): Promise<ChatResponse> {
+  userId?: string,
+  sessionContext?: SessionContext,
+  extraSystemPrompt?: string
+): Promise<SignalResponse> {
   
   // Retrieve similar users for RAG context
   let ragContext = '';
@@ -185,14 +267,25 @@ export async function chatWithBot(
     : BASE_SYSTEM_PROMPT;
 
   // Build messages array
+  const contextBlock = sessionContext
+    ? `\n\n## Session Context (do not reveal to user)\n${JSON.stringify(sessionContext)}`
+    : '';
+
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
+    { role: 'system', content: `${systemPrompt}${contextBlock}` }
+  ];
+
+  if (extraSystemPrompt) {
+    messages.push({ role: 'system', content: extraSystemPrompt });
+  }
+
+  messages.push(
     ...history.map(h => ({
       role: h.role as 'user' | 'assistant',
       content: h.content
     })),
     { role: 'user', content: userMessage }
-  ];
+  );
 
   try {
     const completion = await openai.chat.completions.create({
@@ -209,34 +302,51 @@ export async function chatWithBot(
     }
 
     // Parse JSON response
-    const parsed = JSON.parse(content) as ChatResponse;
-    
-    // Validate and clamp values
-    if (parsed.profileUpdate?.traits) {
-      const traits = parsed.profileUpdate.traits;
-      traits.openness = clamp(traits.openness, 0, 1);
-      traits.conscientiousness = clamp(traits.conscientiousness, 0, 1);
-      traits.extraversion = clamp(traits.extraversion, 0, 1);
-      traits.agreeableness = clamp(traits.agreeableness, 0, 1);
-      traits.neuroticism = clamp(traits.neuroticism, 0, 1);
+    const parsed = JSON.parse(content) as SignalResponse;
+
+    const sanitizedSignals: Record<string, number> = {};
+    if (parsed.signals && typeof parsed.signals === 'object') {
+      for (const [key, value] of Object.entries(parsed.signals)) {
+        if (typeof value === 'number') {
+          sanitizedSignals[key] = clamp(value, -0.5, 0.5);
+        }
+      }
     }
 
-    if (parsed.profileUpdate) {
-      parsed.profileUpdate.confidence = clamp(parsed.profileUpdate.confidence, 0, 1);
-    }
+    const topSignals = Object.entries(sanitizedSignals)
+      .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
+      .slice(0, 3)
+      .reduce<Record<string, number>>((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
 
-    return parsed;
+    const assistantMessages = Array.isArray(parsed.assistantMessages)
+      ? parsed.assistantMessages.filter(msg => typeof msg === 'string' && msg.trim().length > 0).slice(0, 3)
+      : [];
+
+    const normalizedMessages = assistantMessages.length > 0
+      ? assistantMessages
+      : ["Tell me more about that."];
+
+    return {
+      assistantMessages: normalizedMessages,
+      nextTopic: parsed.nextTopic || '',
+      signals: topSignals,
+      confidence: clamp(parsed.confidence ?? 0, 0, 1),
+      done: Boolean(parsed.done),
+      itinerary: parsed.itinerary
+    };
   } catch (error) {
     console.error('OpenAI API error:', error);
     
     // Return fallback response
     return {
-      assistantMessage: "I'd love to hear more about that! What else do you enjoy doing?",
-      profileUpdate: {
-        traits: { openness: 0.5, conscientiousness: 0.5, extraversion: 0.5, agreeableness: 0.5, neuroticism: 0.5 },
-        interests: {},
-        confidence: 0.1
-      }
+      assistantMessages: ["I'd love to hear more about that.", "What tends to make you say yes to plans?"],
+      nextTopic: '',
+      signals: {},
+      confidence: 0.1,
+      done: false
     };
   }
 }
@@ -247,3 +357,15 @@ export async function chatWithBot(
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: backend/src/services/llm.ts
+ * ============================================================
+ * PURPOSE:
+ *    OpenAI chat + structured signal extraction.
+ * TECH USED:
+ *    - OpenAI SDK
+ *    - TypeScript
+ * ============================================================
+ */

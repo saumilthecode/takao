@@ -72,8 +72,16 @@ export interface ProfileUpdate {
 }
 
 export interface ChatResponse {
-  assistantMessage: string;
+  assistantMessages: string[];
+  nextTopic?: string;
   profileUpdate: ProfileUpdate;
+  signals?: Record<string, number>;
+  confidence?: number;
+  done?: boolean;
+  itinerary?: {
+    wednesday_study: { theme: string; location_hint: string; plan: string[] };
+    friday_social: { theme: string; location_hint: string; plan: string[]; optional: true };
+  };
 }
 
 export interface MatchExplanation {
@@ -168,3 +176,15 @@ export async function simulateChat(userId: string): Promise<{ conversation: Chat
   if (!res.ok) throw new Error('Failed to simulate chat');
   return res.json();
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: frontend/lib/api.ts
+ * ============================================================
+ * PURPOSE:
+ *    Client-side API wrappers and shared response types.
+ * TECH USED:
+ *    - Fetch API
+ *    - TypeScript
+ * ============================================================
+ */

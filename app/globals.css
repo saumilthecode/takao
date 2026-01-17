@@ -20,30 +20,30 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 0%;
+    --foreground: 71 37% 69%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 0%;
+    --card-foreground: 71 37% 69%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 71 37% 69%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 0%;
+    --secondary-foreground: 71 37% 69%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 0%;
+    --muted-foreground: 71 37% 69%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 0%;
+    --accent-foreground: 71 37% 69%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 0% 0%;
+    --destructive-foreground: 71 37% 69%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 71 37% 69%;
+    --input: 71 37% 69%;
+    --ring: 71 37% 69%;
 
     --radius: 0.5rem;
   }
@@ -86,5 +86,5 @@
 .graph-container {
   width: 100%;
   height: 100%;
-  background: radial-gradient(ellipse at center, hsl(222 84% 8%) 0%, hsl(222 84% 3%) 100%);
+  background: radial-gradient(ellipse at center, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
 }

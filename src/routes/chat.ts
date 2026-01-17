@@ -16,14 +16,103 @@
  *    POST /chat { userId: string, message: string, history: Message[] }
  * 
  * 📤 OUTPUT:
- *    { assistantMessage: string, profileUpdate: ProfileUpdate }
+ *    { assistantMessages: string[], profileUpdate: ProfileUpdate }
  * 
  * ============================================================
  */
 
 import { FastifyInstance } from 'fastify';
 import { chatWithBot } from '../services/llm.js';
-import { updateUserVector } from '../services/vectorStore.js';
+import { buildProfileUpdateFromSignals, updateUserVector } from '../services/vectorStore.js';
+
+const ALLOWED_TOPICS = [
+  'spontaneity',
+  'planning',
+  'social_energy',
+  'study_style',
+  'weekend_style',
+  'comfort_zone',
+  'group_dynamic',
+  'conversation_depth',
+  'curiosity',
+  'nature_vs_city'
+];
+
+type SessionState = {
+  asked_topics: string[];
+  collected_signals: string[];
+  stage: 'warmup' | 'preferences' | 'group-fit' | 'wrapup';
+  turn_count: number;
+};
+
+const sessionStore = new Map<string, SessionState>();
+
+function getSessionState(userId: string): SessionState {
+  const existing = sessionStore.get(userId);
+  if (existing) return existing;
+  const initial: SessionState = {
+    asked_topics: [],
+    collected_signals: [],
+    stage: 'warmup',
+    turn_count: 0
+  };
+  sessionStore.set(userId, initial);
+  return initial;
+}
+
+function updateStage(turnCount: number, done: boolean): SessionState['stage'] {
+  if (done || turnCount >= 10) return 'wrapup';
+  if (turnCount >= 6) return 'group-fit';
+  if (turnCount >= 3) return 'preferences';
+  return 'warmup';
+}
+
+function sanitizeNextTopic(nextTopic: string, state: SessionState): string {
+  const normalized = nextTopic?.trim().toLowerCase();
+  if (normalized && ALLOWED_TOPICS.includes(normalized) && !state.asked_topics.includes(normalized)) {
+    return normalized;
+  }
+  return ALLOWED_TOPICS.find(topic => !state.asked_topics.includes(topic)) || '';
+}
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getBigrams(text: string): string[] {
+  const normalized = normalizeText(text);
+  const tokens = normalized.split(' ').filter(Boolean);
+  const bigrams: string[] = [];
+  for (let i = 0; i < tokens.length - 1; i += 1) {
+    bigrams.push(`${tokens[i]} ${tokens[i + 1]}`);
+  }
+  return bigrams;
+}
+
+function isRepeatQuestion(candidate: string, recentQuestions: string[]): boolean {
+  const candidateBigrams = new Set(getBigrams(candidate));
+  if (candidateBigrams.size === 0) return false;
+  return recentQuestions.some(question => {
+    const questionBigrams = new Set(getBigrams(question));
+    const intersection = [...candidateBigrams].filter(bigram => questionBigrams.has(bigram));
+    const overlap = intersection.length / Math.max(candidateBigrams.size, 1);
+    return overlap >= 0.5;
+  });
+}
+
+function getRecentAssistantQuestions(
+  history: { role: 'user' | 'assistant'; content: string }[]
+): string[] {
+  const questions = history
+    .filter(msg => msg.role === 'assistant' && msg.content.includes('?'))
+    .map(msg => msg.content)
+    .slice(-3);
+  return questions;
+}
 
 interface ChatRequest {
   userId: string;
@@ -46,16 +135,73 @@ export async function chatRoutes(fastify: FastifyInstance) {
 
     try {
       // Get response from LLM with structured profile extraction
-      const response = await chatWithBot(message, history);
+      const sessionState = getSessionState(userId);
+      const sessionContext = {
+        asked_topics: sessionState.asked_topics,
+        collected_signals: sessionState.collected_signals,
+        stage: sessionState.stage,
+        turn_count: sessionState.turn_count,
+        allowed_topics: ALLOWED_TOPICS
+      };
 
-      // Update user's vector in the store if profile changed
-      if (response.profileUpdate) {
-        await updateUserVector(userId, response.profileUpdate);
+      const response = await chatWithBot(message, history, userId, sessionContext);
+      const recentQuestions = getRecentAssistantQuestions(history);
+      let finalResponse = response;
+
+      const candidateQuestion = finalResponse.assistantMessages.find(msg => msg.includes('?')) || '';
+      if (candidateQuestion && isRepeatQuestion(candidateQuestion, recentQuestions)) {
+        finalResponse = await chatWithBot(
+          message,
+          history,
+          userId,
+          sessionContext,
+          'You repeated yourself. Ask a different question about a different topic.'
+        );
       }
 
+      const shouldBeDone = finalResponse.confidence >= 0.75 || sessionState.turn_count >= 10;
+      if (shouldBeDone && !finalResponse.itinerary) {
+        finalResponse = await chatWithBot(
+          message,
+          history,
+          userId,
+          sessionContext,
+          'You must set done=true and include itinerary. Stop asking questions.'
+        );
+      }
+
+      const nextTopic = sanitizeNextTopic(finalResponse.nextTopic, sessionState);
+      if (nextTopic) {
+        sessionState.asked_topics = [...sessionState.asked_topics, nextTopic].slice(-15);
+      }
+
+      if (finalResponse.confidence >= 0.6) {
+        const newSignals = Object.keys(finalResponse.signals || {});
+        const collected = new Set(sessionState.collected_signals);
+        newSignals.forEach(signal => collected.add(signal));
+        sessionState.collected_signals = Array.from(collected).slice(-15);
+      }
+
+      sessionState.turn_count += 1;
+      sessionState.stage = updateStage(sessionState.turn_count, finalResponse.done);
+
+      const profileUpdate = buildProfileUpdateFromSignals(
+        userId,
+        finalResponse.signals,
+        finalResponse.confidence
+      );
+
+      // Update user's vector in the store if profile changed
+      await updateUserVector(userId, profileUpdate);
+
       return {
-        assistantMessage: response.assistantMessage,
-        profileUpdate: response.profileUpdate
+        assistantMessages: finalResponse.assistantMessages,
+        nextTopic,
+        profileUpdate,
+        signals: finalResponse.signals,
+        confidence: finalResponse.confidence,
+        done: finalResponse.done || shouldBeDone,
+        itinerary: finalResponse.itinerary || null
       };
     } catch (error) {
       console.error('Chat error:', error);
@@ -72,14 +218,27 @@ export async function chatRoutes(fastify: FastifyInstance) {
     
     // Return pre-scripted demo conversation
     const demoConversation = [
-      { role: 'assistant', content: "Hey! I'm here to help you find your people on campus. What do you usually do when you have free time?" },
+      { role: 'assistant', content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?" },
       { role: 'user', content: "I like reading, mostly sci-fi and tech blogs. Sometimes I go to hackathons." },
-      { role: 'assistant', content: "Nice! A fellow techie. Do you prefer working on projects solo or jamming with others?" },
+      { role: 'assistant', content: "Nice. Do you prefer working on projects solo or jamming with others?" },
       { role: 'user', content: "I like small groups, like 2-3 people max. Big crowds drain me." },
-      { role: 'assistant', content: "Totally get that. When you hang out with friends, what's your ideal vibe - chill at home, explore new cafes, or something active?" },
+      { role: 'assistant', content: "That makes sense. When you hang out with friends, what's your ideal vibe—chill at home, explore new cafes, or something active?" },
       { role: 'user', content: "Chill vibes for sure. Coffee shop study sessions are my thing." }
     ];
 
     return { conversation: demoConversation, userId };
   });
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: backend/src/routes/chat.ts
+ * ============================================================
+ * PURPOSE:
+ *    Fastify routes for chat and demo simulation.
+ * TECH USED:
+ *    - Fastify
+ *    - TypeScript
+ *    - LLM service + vector store
+ * ============================================================
+ */
