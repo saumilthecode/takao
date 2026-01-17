@@ -41,7 +41,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-background page-bounce">
+    <main className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
