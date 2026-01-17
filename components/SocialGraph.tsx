@@ -200,7 +200,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
     const sourceId = getLinkNodeId(link, 'source');
     const targetId = getLinkNodeId(link, 'target');
     const isActive = sourceId === selectedNode.id || targetId === selectedNode.id;
-    const alpha = isActive ? Math.min(0.8, Math.max(0.2, strength + 0.2)) : 0.08;
+    const alpha = isActive ? Math.min(0.95, Math.max(0.35, strength + 0.25)) : 0.18;
     return `rgba(195,206,148,${alpha})`;
   }, [getLinkNodeId, selectedNode]);
 
@@ -421,23 +421,23 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* 3D Graph */}
-      <div className="lg:col-span-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              3D Social Graph
-              <Badge className="text-xs bg-black text-primary-foreground">Dev/UAT</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Force</span> keeps related people closer by simulation.{' '}
-              <span className="font-medium text-foreground">Embedding</span> places everyone by learned similarity coordinates.
+      <div className="lg:col-span-9">
+        <Card className="h-full border-0 bg-transparent shadow-none rounded-none">
+          <CardContent className="p-0">
+            <div className="flex flex-col gap-3 pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                3D Social Graph
+                <Badge className="text-xs bg-black text-primary-foreground">Dev/UAT</Badge>
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Force</span> keeps related people closer by simulation.{' '}
+                <span className="font-medium text-foreground">Embedding</span> places everyone by learned similarity coordinates.
+              </div>
             </div>
-            <div className="relative h-[720px] overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-background via-background to-black/90 shadow-[0_0_0_1px_rgba(195,206,148,0.12),0_20px_60px_rgba(0,0,0,0.6)] lg:aspect-square lg:h-auto lg:max-h-[720px]">
+            <div className="relative h-[calc(100vh-200px)] min-h-[520px] w-full overflow-hidden rounded-none border-0 bg-gradient-to-b from-background via-background to-black/90 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_20%,rgba(195,206,148,0.12),transparent_60%)]" />
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_50%,transparent_0%,rgba(0,0,0,0.55)_70%,rgba(0,0,0,0.85)_100%)]" />
               <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(rgba(195,206,148,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(195,206,148,0.2)_1px,transparent_1px)] bg-[size:44px_44px]" />
@@ -564,7 +564,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
       </div>
 
       {/* Sidebar: Top Matches & Explanation */}
-      <div className="lg:col-span-1 space-y-6">
+      <div className="lg:col-span-3 space-y-6">
         {/* Top Matches */}
         {selectedNode && (
           <Card>

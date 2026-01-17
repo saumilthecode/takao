@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * ============================================================
  * 📄 FILE: backend/src/services/vectorStore.ts
@@ -191,10 +192,145 @@ export async function getKNearestNeighbors(
   const similarities: { id: string; similarity: number }[] = [];
 
   for (const [otherId, otherVector] of vectorIndex.entries()) {
+=======
+/**
+ * ============================================================
+ * 📄 FILE: backend/src/services/vectorStore.ts
+ * ============================================================
+ * 
+ * 🎯 PURPOSE:
+ *    Manages the HNSW vector index for fast kNN similarity search.
+ *    This is the core "systems" component - vectors in, neighbors out.
+ * 
+ * 🛠️ TECH USED:
+ *    - hnswlib-node (HNSW algorithm implementation)
+ *    - Cosine similarity for matching
+ *    - In-memory index (no external DB needed for demo)
+ * 
+ * 📤 EXPORTS:
+ *    - initializeVectorStore() → builds index from users
+ *    - getKNearestNeighbors() → finds k most similar users
+ *    - updateUserVector() → updates user's vector in index
+ *    - cosineSimilarity() → utility for comparing vectors
+ * 
+ * 💡 KEY CONCEPT:
+ *    HNSW = Hierarchical Navigable Small World graphs
+ *    Trades perfect accuracy for speed. Parameters:
+ *    - M: max connections per node
+ *    - efConstruction: build-time beam width
+ *    - efSearch: query-time beam width
+ * 
+ * ============================================================
+ */
+
+import { getAllUsers, getUserById, upsertUser, User } from '../data/seedUsers';
+
+// Note: In production, use actual hnswlib-node
+// For demo, we use brute-force search (works for <1000 vectors)
+
+let vectorIndex: Map<string, number[]> = new Map();
+
+// Current HNSW parameters (tunable)
+let currentConfig = {
+  M: 16,
+  efConstruction: 200,
+  efSearch: 100
+};
+
+type Traits = {
+  openness: number;
+  conscientiousness: number;
+  extraversion: number;
+  agreeableness: number;
+  neuroticism: number;
+};
+
+export type ProfileUpdate = {
+  traits: Traits;
+  interests: Record<string, number>;
+  confidence: number;
+};
+
+const DEFAULT_TRAITS: Traits = {
+  openness: 0.5,
+  conscientiousness: 0.5,
+  extraversion: 0.5,
+  agreeableness: 0.5,
+  neuroticism: 0.5
+};
+
+const SIGNAL_TO_TRAIT_WEIGHTS: Record<string, Partial<Traits>> = {
+  spontaneity: { openness: 0.4, conscientiousness: -0.5 },
+  planning_preference: { conscientiousness: 0.5 },
+  social_energy: { extraversion: 0.6 },
+  curiosity: { openness: 0.6 },
+  introspection: { openness: 0.2, extraversion: -0.3 },
+  nature_orientation: { openness: 0.2, agreeableness: 0.2 },
+  novelty_seeking: { openness: 0.5 }
+};
+
+/**
+ * Initialize the vector store from all users
+ */
+export async function initializeVectorStore(): Promise<void> {
+  const users = getAllUsers();
+  vectorIndex.clear();
+
+  for (const user of users) {
+    vectorIndex.set(user.id, user.vector);
+  }
+
+  console.log(`✅ Vector store initialized with ${vectorIndex.size} vectors`);
+}
+
+/**
+ * Calculate cosine similarity between two vectors
+ */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    throw new Error('Vectors must have same length');
+  }
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  if (magnitude === 0) return 0;
+
+  return dotProduct / magnitude;
+}
+
+/**
+ * Find k nearest neighbors for a user
+ * Returns array of { id, similarity } sorted by similarity desc
+ */
+export async function getKNearestNeighbors(
+  userId: string,
+  k: number = 5
+): Promise<{ id: string; similarity: number }[]> {
+  
+  const userVector = vectorIndex.get(userId);
+  if (!userVector) {
+    throw new Error(`User ${userId} not found in index`);
+  }
+
+  // Calculate similarity to all other users
+  const similarities: { id: string; similarity: number }[] = [];
+
+  vectorIndex.forEach((otherVector, otherId) => {
+>>>>>>> 9fd1765ca084fd8b73ffacd5fd6b3899918f90bd
     if (otherId !== userId) {
       const sim = cosineSimilarity(userVector, otherVector);
       similarities.push({ id: otherId, similarity: sim });
     }
+<<<<<<< HEAD
   }
 
   // Sort by similarity descending and take top k
@@ -223,6 +359,44 @@ export async function updateUserVector(
   );
   const newVector = buildCombinedVector(profileUpdate.traits, semantic);
 
+=======
+  });
+
+  // Sort by similarity descending and take top k
+  similarities.sort((a, b) => b.similarity - a.similarity);
+  return similarities.slice(0, k);
+}
+
+/**
+ * Update a user's vector in the index
+ * Called after chat extracts new profile data
+ */
+export async function updateUserVector(
+  userId: string,
+  profileUpdate: {
+    traits: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
+    confidence: number;
+  }
+): Promise<void> {
+  
+  const user = getUserById(userId);
+  
+  // Create new vector from traits
+  const newVector = [
+    profileUpdate.traits.openness,
+    profileUpdate.traits.conscientiousness,
+    profileUpdate.traits.extraversion,
+    profileUpdate.traits.agreeableness,
+    profileUpdate.traits.neuroticism
+  ];
+
+>>>>>>> 9fd1765ca084fd8b73ffacd5fd6b3899918f90bd
   if (user) {
     // Blend old and new based on confidence
     const blendFactor = profileUpdate.confidence * 0.3; // Gradual updates
