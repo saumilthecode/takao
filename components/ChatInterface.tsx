@@ -328,7 +328,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
           <CardTitle className="text-lg flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             Your Signal Profile
-            <Badge variant="outline" className="text-xs">Visible to dev/UAT</Badge>
+            <Badge className="text-xs bg-black text-primary-foreground">Visible to dev/UAT</Badge>
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Real-time signal insights
