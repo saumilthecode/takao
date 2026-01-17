@@ -19,8 +19,9 @@
 
 import { useState, useId, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Globe, Settings, Sparkles, Compass } from 'lucide-react';
+import { MessageSquare, Globe, Settings, Compass } from 'lucide-react';
 import ChatInterface from '@/components/ChatInterface';
 import SocialGraph from '@/components/SocialGraph';
 import TunerDashboard from '@/components/TunerDashboard';
@@ -46,7 +47,7 @@ export default function Home() {
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <Image src="/stickman.png" alt="Takoa" width={24} height={24} className="h-6 w-6" />
             <h1 className="text-xl font-bold">Takoa</h1>
             <span className="text-muted-foreground text-sm ml-2">Find Your People</span>
           </div>
