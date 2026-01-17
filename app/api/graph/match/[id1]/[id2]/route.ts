@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureInitialized } from '@/src/init';
 import { getAllUsers } from '@/src/data/seedUsers';
-import { cosineSimilarity } from '@/src/services/vectorStore';
+import { cosineSimilarity, getSemanticVectorForUser } from '@/src/services/vectorStore';
 
 export async function GET(
   request: NextRequest,
@@ -36,22 +36,37 @@ export async function GET(
     // Calculate overall similarity
     const similarity = cosineSimilarity(user1.vector, user2.vector);
 
-    // Calculate contribution of each dimension
+    // Calculate contribution of each trait dimension
     const dimensions = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'];
-    const contributions = dimensions.map((dim, idx) => {
+    const traitContributions = dimensions.map((dim, idx) => {
       const diff = Math.abs(user1.vector[idx] - user2.vector[idx]);
       const contribution = (1 - diff) * user1.vector[idx] * user2.vector[idx];
       return { dimension: dim, contribution: parseFloat(contribution.toFixed(3)) };
-    }).sort((a, b) => b.contribution - a.contribution);
+    });
+
+    // Semantic interest contributions (from interest embeddings)
+    const semantic1 = await getSemanticVectorForUser(user1.id, user1.interests);
+    const semantic2 = await getSemanticVectorForUser(user2.id, user2.interests);
+    const semanticContributions = semantic1.map((value, idx) => {
+      const diff = Math.abs(value - (semantic2[idx] ?? 0));
+      const contribution = (1 - diff) * value * (semantic2[idx] ?? 0);
+      return { dimension: `interest_dim_${idx + 1}`, contribution: parseFloat(contribution.toFixed(3)) };
+    });
 
     // Find shared interests
     const sharedInterests = user1.interests.filter(i => user2.interests.includes(i));
+    const interestContributions = sharedInterests.map(tag => ({
+      dimension: `interest:${tag}`,
+      contribution: 0.15
+    }));
 
     return NextResponse.json({
       user1: { id: user1.id, name: user1.name },
       user2: { id: user2.id, name: user2.name },
       similarity: parseFloat(similarity.toFixed(3)),
-      topContributors: contributions.slice(0, 3),
+      topContributors: [...traitContributions, ...semanticContributions, ...interestContributions]
+        .sort((a, b) => b.contribution - a.contribution)
+        .slice(0, 5),
       sharedInterests
     });
   } catch (error) {

@@ -210,7 +210,7 @@ export async function chatRoutes(fastify: FastifyInstance) {
       );
 
       // Update user's vector in the store if profile changed
-      await updateUserVector(userId, profileUpdate);
+      await updateUserVector(userId, profileUpdate, message);
 
       return {
         assistantMessages: finalResponse.assistantMessages,

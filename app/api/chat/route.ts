@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Update user's vector in the store if profile changed
-    await updateUserVector(userId, profileUpdate);
+    await updateUserVector(userId, profileUpdate, message);
 
     return NextResponse.json({
       assistantMessages: finalResponse.assistantMessages,

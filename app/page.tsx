@@ -63,7 +63,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
+            <TabsTrigger value="chat" className="flex items-center gap-2 shadow-md">
               <MessageSquare className="h-4 w-4" />
               Chat
             </TabsTrigger>

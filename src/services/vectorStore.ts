@@ -29,11 +29,13 @@
  */
 
 import { getAllUsers, getUserById, upsertUser, User } from '../data/seedUsers';
+import { getTextEmbedding } from './llm';
 
 // Note: In production, use actual hnswlib-node
 // For demo, we use brute-force search (works for <1000 vectors)
 
 let vectorIndex: Map<string, number[]> = new Map();
+const semanticMemory = new Map<string, number[]>();
 
 // Current HNSW parameters (tunable)
 let currentConfig = {
@@ -74,6 +76,62 @@ const SIGNAL_TO_TRAIT_WEIGHTS: Record<string, Partial<Traits>> = {
   novelty_seeking: { openness: 0.5 }
 };
 
+const TRAIT_WEIGHT = 0.7;
+const SEMANTIC_WEIGHT = 0.3;
+
+function normalizeVector(vector: number[]): number[] {
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (!norm) return vector;
+  return vector.map(value => value / norm);
+}
+
+function blendVectors(base: number[], update: number[], weight: number): number[] {
+  if (!base.length) return update;
+  const blended = base.map((value, idx) => value * (1 - weight) + (update[idx] ?? 0) * weight);
+  return normalizeVector(blended);
+}
+
+async function averageEmbeddings(texts: string[]): Promise<number[]> {
+  if (!texts.length) return [];
+  const embeddings = await Promise.all(texts.map(text => getTextEmbedding(text)));
+  const length = embeddings[0]?.length || 0;
+  if (!length) return [];
+  const summed = new Array(length).fill(0);
+  embeddings.forEach(vec => {
+    for (let i = 0; i < length; i += 1) {
+      summed[i] += vec[i] ?? 0;
+    }
+  });
+  return normalizeVector(summed.map(value => value / embeddings.length));
+}
+
+async function buildSemanticVector(userId: string, interests: string[], messageText?: string): Promise<number[]> {
+  const interestEmbedding = await averageEmbeddings(interests);
+  const current = semanticMemory.get(userId) || interestEmbedding;
+  if (messageText) {
+    const messageEmbedding = await getTextEmbedding(messageText);
+    const updated = blendVectors(current, messageEmbedding, 0.25);
+    semanticMemory.set(userId, updated);
+    return updated;
+  }
+  semanticMemory.set(userId, current);
+  return current;
+}
+
+function buildCombinedVector(traits: Traits, semantic: number[]): number[] {
+  const traitVector = normalizeVector([
+    traits.openness,
+    traits.conscientiousness,
+    traits.extraversion,
+    traits.agreeableness,
+    traits.neuroticism
+  ]).map(value => value * TRAIT_WEIGHT);
+
+  const semanticVector = normalizeVector(semantic).map(value => value * SEMANTIC_WEIGHT);
+  const combined = [...traitVector, ...semanticVector];
+  return normalizeVector(combined);
+}
+
 /**
  * Initialize the vector store from all users
  */
@@ -82,7 +140,10 @@ export async function initializeVectorStore(): Promise<void> {
   vectorIndex.clear();
 
   for (const user of users) {
-    vectorIndex.set(user.id, user.vector);
+    const semantic = await buildSemanticVector(user.id, user.interests);
+    const combined = buildCombinedVector(user.traits, semantic);
+    user.vector = combined;
+    vectorIndex.set(user.id, combined);
   }
 
   console.log(`✅ Vector store initialized with ${vectorIndex.size} vectors`);
@@ -147,28 +208,20 @@ export async function getKNearestNeighbors(
  */
 export async function updateUserVector(
   userId: string,
-  profileUpdate: {
-    traits: {
-      openness: number;
-      conscientiousness: number;
-      extraversion: number;
-      agreeableness: number;
-      neuroticism: number;
-    };
-    confidence: number;
-  }
+  profileUpdate: ProfileUpdate,
+  messageText?: string
 ): Promise<void> {
   
   const user = getUserById(userId);
   
-  // Create new vector from traits
-  const newVector = [
-    profileUpdate.traits.openness,
-    profileUpdate.traits.conscientiousness,
-    profileUpdate.traits.extraversion,
-    profileUpdate.traits.agreeableness,
-    profileUpdate.traits.neuroticism
-  ];
+  const interestTags = user?.interests || [];
+  const profileInterests = Object.keys(profileUpdate.interests || {});
+  const semantic = await buildSemanticVector(
+    userId,
+    [...new Set([...interestTags, ...profileInterests])],
+    messageText
+  );
+  const newVector = buildCombinedVector(profileUpdate.traits, semantic);
 
   if (user) {
     // Blend old and new based on confidence
@@ -192,13 +245,17 @@ export async function updateUserVector(
       uni: 'Your University',
       vector: newVector,
       traits: profileUpdate.traits,
-      interests: [],
+      interests: profileInterests,
       confidence: clamp(profileUpdate.confidence, 0, 1)
     };
 
     upsertUser(newUser);
     vectorIndex.set(userId, newVector);
   }
+}
+
+export async function getSemanticVectorForUser(userId: string, interests: string[]): Promise<number[]> {
+  return buildSemanticVector(userId, interests);
 }
 
 /**
