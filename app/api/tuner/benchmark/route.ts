@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const latencyBudget = parseFloat(searchParams.get('latencyBudget') || '50');
 
     // Run benchmark across multiple configs
-    const results = await runBenchmark(latencyBudget);
+    const results = await runBenchmark();
 
     // Select best config under latency budget
     const selectedConfig = getBestConfig(results, latencyBudget);
