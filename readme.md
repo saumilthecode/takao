@@ -4,42 +4,90 @@
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- Node.js 18+ installed
+- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+
+### Setup
+
 ```bash
-# 1. Copy environment file and add your OpenAI key
-cp .env.example .env
-# Then edit .env and add your OPENAI_API_KEY
+# 1. Set up environment
+# Create .env file in project root with your OpenAI key:
+echo "openaikey=your-api-key-here" > .env
 
-# 2. Install & run backend
-cd backend
+# 2. Install dependencies (all in one command)
 npm install
-npm run dev
+```
 
-# 3. Install & run frontend (new terminal)
-cd frontend
-npm install
+### Run the Application
+
+Open two terminal windows/tabs:
+
+**Terminal 1 - API Backend:**
+```bash
+npm run dev:api
+# Backend runs on http://localhost:4000
+```
+
+**Terminal 2 - Frontend:**
+```bash
 npm run dev
+# Frontend runs on http://localhost:3000
+```
+
+Then open http://localhost:3000 in your browser.
+
+### Quick Test
+
+```bash
+# Test backend health
+curl http://localhost:4000/health
+
+# Should return: {"status":"ok","timestamp":...}
 ```
 
 ## 📁 Project Structure
 
 ```
 takoa/
-├── .env.example          ← COPY THIS TO .env AND EDIT
-├── backend/              ← Fastify + TypeScript API
-│   └── src/
-│       ├── index.ts      ← Server entry point
-│       ├── routes/       ← API endpoints
-│       └── services/     ← Business logic (HNSW, UMAP, etc.)
-└── frontend/             ← Next.js + shadcn/ui
-    ├── app/              ← Pages
-    └── components/       ← React components
+├── .env                  ← Your OpenAI API key (create this)
+├── src/                  ← Fastify + TypeScript API (port 4000)
+│   ├── index.ts          ← Server entry point
+│   ├── routes/           ← API endpoints (/chat, /graph, /tuner)
+│   └── services/         ← Business logic (HNSW, UMAP, LLM)
+├── app/                  ← Next.js pages (port 3000)
+├── components/           ← React components
+├── lib/                  ← Shared utilities
+├── scripts/ralph/        ← Ralph automation scripts
+└── prd.json              ← Product requirements document
 ```
 
-## 🔑 API Keys Needed
+## 🛠️ Development Commands
 
-| Key | Required | Get From |
-|-----|----------|----------|
-| `OPENAI_API_KEY` | ✅ Yes | https://platform.openai.com/api-keys |
+```bash
+# Frontend (Next.js)
+npm run dev               # Start Next.js dev server
+npm run build             # Build for production
+npm start                 # Run production build
+npm run lint              # Run ESLint
+
+# API Backend (Fastify)
+npm run dev:api           # Start API dev server with hot reload
+npm run build:api         # Build TypeScript to dist/
+npm run start:api         # Run production build
+```
+
+## 🔑 Environment Setup
+
+Create a `.env` file in the project root:
+
+```bash
+openaikey=sk-your-openai-api-key-here
+```
+
+Get your API key from: https://platform.openai.com/api-keys
+
+**Note:** The key is named `openaikey` (not `OPENAI_API_KEY`) to match your setup.
 
 ## 🎬 Demo Features
 

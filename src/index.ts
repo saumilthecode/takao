@@ -25,7 +25,7 @@ import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 
 // Load environment variables from .env file
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: '.env' });
 
 // Import route handlers
 import { chatRoutes } from './routes/chat.js';
