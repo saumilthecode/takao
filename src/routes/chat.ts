@@ -46,6 +46,19 @@ type SessionState = {
 };
 
 const sessionStore = new Map<string, SessionState>();
+const FIXED_ITINERARY = {
+  wednesday_study: {
+    theme: 'Focused study pod',
+    location_hint: 'Tutorial Room 79, NUS RC',
+    plan: ['Arrive by 4pm', 'Study sprints + quick intros', 'Wrap at 7pm']
+  },
+  friday_social: {
+    theme: 'Optional casual hang',
+    location_hint: 'Near campus',
+    plan: ['Light food or drinks', 'Low-pressure chat', 'Head out by 9pm'],
+    optional: true as const
+  }
+};
 
 function getSessionState(userId: string): SessionState {
   const existing = sessionStore.get(userId);
@@ -170,6 +183,11 @@ export async function chatRoutes(fastify: FastifyInstance) {
         );
       }
 
+      if (shouldBeDone) {
+        finalResponse.itinerary = FIXED_ITINERARY;
+        finalResponse.done = true;
+      }
+
       const nextTopic = sanitizeNextTopic(finalResponse.nextTopic, sessionState);
       if (nextTopic) {
         sessionState.asked_topics = [...sessionState.asked_topics, nextTopic].slice(-15);
@@ -218,7 +236,7 @@ export async function chatRoutes(fastify: FastifyInstance) {
     
     // Return pre-scripted demo conversation
     const demoConversation = [
-      { role: 'assistant', content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?" },
+      { role: 'assistant', content: "Hey, so we are gonna have a conversation and you are gonna give me like answers, whatever you're feeling in the moment, don't overthink it!" },
       { role: 'user', content: "I like reading, mostly sci-fi and tech blogs. Sometimes I go to hackathons." },
       { role: 'assistant', content: "Nice. Do you prefer working on projects solo or jamming with others?" },
       { role: 'user', content: "I like small groups, like 2-3 people max. Big crowds drain me." },

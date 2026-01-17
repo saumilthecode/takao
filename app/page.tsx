@@ -47,11 +47,13 @@ export default function Home() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link
               href="/about"
-              className="transition-colors hover:text-foreground"
+              className="font-semibold underline decoration-2 underline-offset-4 transition-colors hover:text-foreground"
             >
               About
             </Link>
-            <span>Demo Mode</span>
+            <span className="rounded-md bg-black px-2 py-1 text-xs font-semibold text-primary-foreground">
+              Demo Mode
+            </span>
           </div>
         </div>
       </header>
@@ -87,6 +89,23 @@ export default function Home() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <footer className="border-t border-border px-6 py-6 text-xs text-muted-foreground">
+        <div className="max-w-7xl mx-auto" />
+      </footer>
     </main>
   );
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: frontend/app/page.tsx
+ * ============================================================
+ * PURPOSE:
+ *    Main entry UI with chat, graph, and tuner tabs.
+ * TECH USED:
+ *    - Next.js App Router
+ *    - React
+ *    - shadcn/ui tabs
+ * ============================================================
+ */

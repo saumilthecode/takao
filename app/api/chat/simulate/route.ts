@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     
     // Return pre-scripted demo conversation
     const demoConversation = [
-      { role: 'assistant' as const, content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?" },
+      { role: 'assistant' as const, content: "Hey, so we are gonna have a conversation and you are gonna give me like answers, whatever you're feeling in the moment, don't overthink it!" },
       { role: 'user' as const, content: "I like reading, mostly sci-fi and tech blogs. Sometimes I go to hackathons." },
       { role: 'assistant' as const, content: "Nice. Do you prefer working on projects solo or jamming with others?" },
       { role: 'user' as const, content: "I like small groups, like 2-3 people max. Big crowds drain me." },
@@ -34,3 +34,15 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: app/api/chat/simulate/route.ts
+ * ============================================================
+ * PURPOSE:
+ *    Demo chat conversation endpoint for UI previews.
+ * TECH USED:
+ *    - Next.js App Router API routes
+ *    - TypeScript
+ * ============================================================
+ */

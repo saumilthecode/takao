@@ -20,30 +20,30 @@
 
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 71 37% 69%;
+    --background: 71 37% 69%;
+    --foreground: 0 0% 0%;
 
-    --card: 0 0% 0%;
-    --card-foreground: 71 37% 69%;
+    --card: 71 37% 69%;
+    --card-foreground: 0 0% 0%;
 
-    --primary: 71 37% 69%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 71 37% 69%;
 
-    --secondary: 0 0% 0%;
-    --secondary-foreground: 71 37% 69%;
+    --secondary: 71 37% 69%;
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 0 0% 0%;
-    --muted-foreground: 71 37% 69%;
+    --muted: 71 37% 69%;
+    --muted-foreground: 0 0% 0%;
 
-    --accent: 0 0% 0%;
-    --accent-foreground: 71 37% 69%;
+    --accent: 71 37% 69%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 0% 0%;
     --destructive-foreground: 71 37% 69%;
 
-    --border: 71 37% 69%;
-    --input: 71 37% 69%;
-    --ring: 71 37% 69%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
 
     --radius: 0.5rem;
   }
@@ -56,6 +56,34 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Ambient leaf image */
+.ambient-image {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 40vw;
+  object-fit: cover;
+  pointer-events: none;
+  mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.ambient-caption {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  max-width: 320px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: hsl(var(--foreground));
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Custom scrollbar for dark theme */

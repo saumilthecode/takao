@@ -16,11 +16,12 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { fetchGraph, fetchMatchExplanation, GraphNode, GraphLink, GraphData, MatchExplanation } from '@/lib/api';
 import { Users, X } from 'lucide-react';
 
@@ -30,23 +31,26 @@ const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false 
 export default function SocialGraph() {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [graphMode, setGraphMode] = useState<'force' | 'embedding'>('force');
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [topMatches, setTopMatches] = useState<Array<{ node: GraphNode; similarity: number }>>([]);
   const [matchExplanation, setMatchExplanation] = useState<MatchExplanation | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GraphNode } | null>(null);
+  const [linkThreshold, setLinkThreshold] = useState(0.2);
+  const [highlightPod, setHighlightPod] = useState(false);
   const graphRef = useRef<any>();
 
   // Fetch graph data on mount
   useEffect(() => {
     loadGraph();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [graphMode]);
 
   const loadGraph = async () => {
     try {
       setLoading(true);
-      const data = await fetchGraph('force');
+      const data = await fetchGraph(graphMode);
       
       // Filter out links that reference non-existent nodes
       const nodeIds = new Set(data.nodes.map(n => n.id));
@@ -87,6 +91,7 @@ export default function SocialGraph() {
     if (!graphData) return;
 
     setSelectedNode(node);
+    setHighlightPod(true);
 
     // Find top 5 matches (nodes connected to this one, sorted by link strength)
     const connectedLinks = graphData.links.filter(link => {
@@ -148,6 +153,51 @@ export default function SocialGraph() {
     return (sourceId === selectedNode.id || targetId === selectedNode.id) ? 3 : 0.5;
   }, [selectedNode]);
 
+  const podNodeIds = useMemo(() => {
+    if (!selectedNode || topMatches.length === 0) return new Set<string>();
+    return new Set([selectedNode.id, ...topMatches.map(match => match.node.id)]);
+  }, [selectedNode, topMatches]);
+
+  const filteredGraphData = useMemo(() => {
+    if (!graphData) return null;
+    const linkBuckets = new Map<string, GraphLink[]>();
+    graphData.links.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      if (!linkBuckets.has(sourceId)) linkBuckets.set(sourceId, []);
+      if (!linkBuckets.has(targetId)) linkBuckets.set(targetId, []);
+      linkBuckets.get(sourceId)?.push(link);
+      linkBuckets.get(targetId)?.push(link);
+    });
+
+    const filteredLinks: GraphLink[] = [];
+    linkBuckets.forEach(links => {
+      const selected = links
+        .filter(link => link.strength >= linkThreshold)
+        .sort((a, b) => b.strength - a.strength)
+        .slice(0, 4);
+      selected.forEach(link => {
+        if (!filteredLinks.includes(link)) {
+          filteredLinks.push(link);
+        }
+      });
+    });
+
+    return {
+      ...graphData,
+      links: filteredLinks
+    };
+  }, [graphData, linkThreshold]);
+
+  useEffect(() => {
+    if (!filteredGraphData || !graphRef.current) return;
+    const timeout = window.setTimeout(() => {
+      graphRef.current?.zoomToFit(800, 40);
+    }, 200);
+    return () => window.clearTimeout(timeout);
+  }, [filteredGraphData]);
+
+
   if (loading) {
     return (
       <Card>
@@ -180,30 +230,121 @@ export default function SocialGraph() {
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               3D Social Graph
+              <Badge variant="outline" className="text-xs">Dev/UAT</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[600px] bg-black rounded-lg overflow-hidden">
-              {typeof window !== 'undefined' && (
+            <div className="mb-4 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Force</span> keeps related people closer by simulation.{' '}
+              <span className="font-medium text-foreground">Embedding</span> places everyone by learned similarity coordinates.
+            </div>
+            <div className="relative h-[720px] overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-background via-background to-black/90 shadow-[0_0_0_1px_rgba(195,206,148,0.12),0_20px_60px_rgba(0,0,0,0.6)] lg:aspect-square lg:h-auto lg:max-h-[720px]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_20%,rgba(195,206,148,0.12),transparent_60%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_50%,transparent_0%,rgba(0,0,0,0.55)_70%,rgba(0,0,0,0.85)_100%)]" />
+              <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(rgba(195,206,148,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(195,206,148,0.2)_1px,transparent_1px)] bg-[size:44px_44px]" />
+
+              <div className="absolute left-4 top-4 z-10 rounded-xl border border-border bg-background/70 px-3 py-2 text-xs text-foreground">
+                <div className="font-semibold">Legend</div>
+                <div className="mt-2 flex flex-col gap-1">
+                  <span>Clusters</span>
+                  <span>You</span>
+                  <span>Pod</span>
+                </div>
+              </div>
+
+              <div className="absolute right-4 top-4 z-10 flex flex-col gap-3 rounded-xl border border-border bg-background/70 p-3 text-xs text-foreground">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={graphMode === 'force' ? 'default' : 'outline'}
+                    onClick={() => setGraphMode('force')}
+                  >
+                    Force
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={graphMode === 'embedding' ? 'default' : 'outline'}
+                    onClick={() => setGraphMode('embedding')}
+                  >
+                    Embedding
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span>Link threshold</span>
+                    <span>{linkThreshold.toFixed(2)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={linkThreshold}
+                    onChange={(e) => setLinkThreshold(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={highlightPod ? 'default' : 'outline'}
+                    onClick={() => setHighlightPod(prev => !prev)}
+                    disabled={!selectedNode}
+                  >
+                    Highlight pod
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => graphRef.current?.zoomToFit(600, 40)}
+                  >
+                    Reset camera
+                  </Button>
+                </div>
+              </div>
+
+              {typeof window !== 'undefined' && filteredGraphData && (
                 <ForceGraph3D
                   ref={graphRef}
-                  graphData={graphData}
+                  graphData={filteredGraphData}
                   nodeLabel={(node: any) => `${node.name}\n${node.age} years old\n${node.uni}`}
                   nodeColor={(node: any) => {
-                    if (selectedNode && node.id === selectedNode.id) return '#3b82f6'; // blue for selected
-                    if (hoveredNode && node.id === hoveredNode.id) return '#10b981'; // green for hovered
-                    // Color by cluster
-                    const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+                    const isSelected = selectedNode && node.id === selectedNode.id;
+                    const isHovered = hoveredNode && node.id === hoveredNode.id;
+                    const isPod = highlightPod && podNodeIds.has(node.id);
+                    if (isSelected) return '#c3ce94';
+                    if (isHovered) return '#dbe4b7';
+                    if (isPod) return '#b7c789';
+                    const colors = ['#c3ce94', '#aab874', '#92a45f', '#7a904b', '#6a7d3f', '#576636'];
                     return colors[node.clusterId % colors.length] || '#6b7280';
                   }}
-                  nodeVal={(node: any) => 3 + (node.traits?.extraversion || 0) * 2}
+                  nodeVal={(node: any) => {
+                    const base = 3 + (node.traits?.extraversion || 0) * 2;
+                    if (selectedNode && node.id === selectedNode.id) return base + 3;
+                    if (highlightPod && podNodeIds.has(node.id)) return base + 1.5;
+                    return base;
+                  }}
                   linkSource="source"
                   linkTarget="target"
                   linkOpacity={getLinkOpacity}
                   linkWidth={getLinkWidth}
-                  linkColor={() => '#64748b'}
+                  linkColor={(link: any) => {
+                    const strength = link?.strength ?? 0.2;
+                    return `rgba(195,206,148,${Math.min(0.5, Math.max(0.12, strength))})`;
+                  }}
                   onNodeHover={handleNodeHover}
-                  onNodeClick={handleNodeClick}
+                  onNodeClick={(node: any) => {
+                    handleNodeClick(node);
+                    graphRef.current?.cameraPosition(
+                      { x: node.x * 1.2, y: node.y * 1.2, z: node.z * 1.2 + 80 },
+                      node,
+                      900
+                    );
+                  }}
                   enableNodeDrag={true}
                   showNavInfo={false}
                 />
@@ -239,7 +380,7 @@ export default function SocialGraph() {
         {selectedNode && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-lg">Top Matches</CardTitle>
+              <CardTitle className="text-lg">Pod of 5</CardTitle>
               <button
                 onClick={() => {
                   setSelectedNode(null);
@@ -277,6 +418,32 @@ export default function SocialGraph() {
                   ))}
                 </div>
               </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedNode && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Pod cohesion score</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-2xl font-bold text-primary">
+                {topMatches.length
+                  ? `${(topMatches.reduce((sum, match) => sum + match.similarity, 0) / topMatches.length * 100).toFixed(0)}%`
+                  : '—'}
+              </div>
+              <div className="text-xs text-muted-foreground">Why this pod fits</div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {matchExplanation?.topContributors.slice(0, 3).map((contrib, idx) => (
+                  <li key={idx} className="capitalize">
+                    {contrib.dimension} alignment
+                  </li>
+                ))}
+                {!matchExplanation && (
+                  <li>Shared interests and compatible group dynamics.</li>
+                )}
+              </ul>
             </CardContent>
           </Card>
         )}
@@ -352,3 +519,16 @@ export default function SocialGraph() {
     </div>
   );
 }
+
+/**
+ * ============================================================
+ * 📄 FILE FOOTER: frontend/components/SocialGraph.tsx
+ * ============================================================
+ * PURPOSE:
+ *    3D social graph view with pod-of-5 insights and view toggle.
+ * TECH USED:
+ *    - react-force-graph-3d
+ *    - React
+ *    - shadcn/ui
+ * ============================================================
+ */

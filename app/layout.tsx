@@ -34,6 +34,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
+        <img
+          src="/leaf.png"
+          alt=""
+          className="ambient-image"
+          aria-hidden="true"
+        />
         {children}
       </body>
     </html>

@@ -37,6 +37,13 @@ import { sendChatMessage, simulateChat, ChatMessage, ProfileUpdate } from '@/lib
 // Generate a random user ID for this session
 const SESSION_USER_ID = `user_demo_${Date.now()}`;
 
+const SCENARIO_SCRIPTS: Record<string, string> = {
+  introvert_deep: "I'm more introverted and I really like deep conversations, especially about books, films, or ideas.",
+  outgoing_events: "I'm outgoing and I like meeting people at events, clubs, or campus nights.",
+  research_study: "I'm research-focused and usually look for study groups or people who like serious work sessions.",
+  sports_casual: "I'm into sports and casual meetups, like gym sessions or pickup games."
+};
+
 interface ChatInterfaceProps {
   onProfileUpdate?: () => void;
 }
@@ -45,12 +52,15 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, so we are gonna have a conversation and you are gonna give me like answers, whatever you're feeling in the moment, don't overthink it!"
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [profile, setProfile] = useState<ProfileUpdate | null>(null);
+  const [scenarioKey, setScenarioKey] = useState('');
+  const [planVisible, setPlanVisible] = useState(false);
+  const [planSent, setPlanSent] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingTimeouts = useRef<number[]>([]);
@@ -85,8 +95,10 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     });
   }, []);
 
+  const isChatReady = true;
+
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if (!isChatReady || !input.trim() || isLoading) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -101,6 +113,17 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
         ? response.assistantMessages
         : [fallbackMessage || "Tell me more about that."];
       scheduleAssistantMessages(assistantMessages);
+
+      if (response.done || response.itinerary) {
+        setPlanVisible(true);
+        if (!planSent) {
+          setPlanSent(true);
+          scheduleAssistantMessages([
+            "Plan locked: study 4pm–7pm at Tutorial Room 79, NUS RC with your pod of 5.",
+            "I'll share the same plan with the other four people."
+          ]);
+        }
+      }
       
       // Update profile with smooth transition
       if (response.profileUpdate) {
@@ -134,14 +157,16 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, onProfileUpdate, scheduleAssistantMessages]);
+  }, [input, isLoading, isChatReady, messages, onProfileUpdate, scheduleAssistantMessages]);
 
   const handleSimulate = useCallback(async () => {
     setIsLoading(true);
     clearPendingTimeouts();
+    setPlanVisible(true);
+    setPlanSent(true);
     setMessages([{
       role: 'assistant',
-      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, so we are gonna have a conversation and you are gonna give me like answers, whatever you're feeling in the moment, don't overthink it!"
     }]);
     setProfile(null);
     try {
@@ -171,10 +196,13 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
     clearPendingTimeouts();
     setMessages([{
       role: 'assistant',
-      content: "Hey, I'm here to help you find your people on campus. What do you usually do when you have free time?"
+      content: "Hey, so we are gonna have a conversation and you are gonna give me like answers, whatever you're feeling in the moment, don't overthink it!"
     }]);
     setProfile(null);
     setInput('');
+    setScenarioKey('');
+    setPlanVisible(false);
+    setPlanSent(false);
   }, []);
 
   return (
@@ -184,7 +212,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
-            Onboarding Chat
+            Signal Chat
           </CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleReset} disabled={isLoading}>
@@ -241,8 +269,36 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
             </div>
           </ScrollArea>
 
+          {/* Quick Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Quick actions</div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={scenarioKey}
+                onChange={(e) => setScenarioKey(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Autofill a scenario</option>
+                <option value="introvert_deep">Introvert + deep convos</option>
+                <option value="outgoing_events">Outgoing + events</option>
+                <option value="research_study">Research-focused + study groups</option>
+                <option value="sports_casual">Sports + casual meetups</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (scenarioKey) setInput(SCENARIO_SCRIPTS[scenarioKey]);
+                }}
+                disabled={!scenarioKey}
+              >
+                Autofill
+              </Button>
+            </div>
+          </div>
+
           {/* Input */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-3">
             <Input
               placeholder="Type your message..."
               value={input}
@@ -274,6 +330,7 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
           <CardTitle className="text-lg flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             Your Signal Profile
+            <Badge variant="outline" className="text-xs">Visible to dev/UAT</Badge>
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Real-time signal insights
@@ -349,10 +406,42 @@ export default function ChatInterface({ onProfileUpdate }: ChatInterfaceProps) {
               <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-50" />
               <p className="text-sm font-medium">Start chatting to build your signal profile</p>
               <p className="text-xs mt-2 opacity-75">We extract conversational signals from your responses</p>
+              <p className="text-xs mt-2 opacity-75">Or tap a scenario to demo instantly.</p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {planVisible && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Your Plan</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Shared with 4 other users (pod of 5)
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            <div>
+              <p className="font-medium">Study Session</p>
+              <p className="text-muted-foreground">4pm–7pm • Tutorial Room 79, NUS RC</p>
+            </div>
+            <div>
+              <p className="font-medium">Friday Social (optional)</p>
+              <p className="text-muted-foreground">Near campus • casual hang</p>
+            </div>
+            <div className="pt-2">
+              <Button asChild variant="outline" size="sm">
+                <a href="https://example.com/pay?amount=5" target="_blank" rel="noreferrer">
+                  Pay $5 (mock)
+                </a>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Fake link for demo check-in.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

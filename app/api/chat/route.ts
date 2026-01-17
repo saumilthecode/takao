@@ -35,6 +35,19 @@ type SessionState = {
 };
 
 const sessionStore = new Map<string, SessionState>();
+const FIXED_ITINERARY = {
+  wednesday_study: {
+    theme: 'Focused study pod',
+    location_hint: 'Tutorial Room 79, NUS RC',
+    plan: ['Arrive by 4pm', 'Study sprints + quick intros', 'Wrap at 7pm']
+  },
+  friday_social: {
+    theme: 'Optional casual hang',
+    location_hint: 'Near campus',
+    plan: ['Light food or drinks', 'Low-pressure chat', 'Head out by 9pm'],
+    optional: true as const
+  }
+};
 
 function getSessionState(userId: string): SessionState {
   const existing = sessionStore.get(userId);
@@ -150,6 +163,11 @@ export async function POST(request: NextRequest) {
         sessionContext,
         'You must set done=true and include itinerary. Stop asking questions.'
       );
+    }
+
+    if (shouldBeDone) {
+      finalResponse.itinerary = FIXED_ITINERARY;
+      finalResponse.done = true;
     }
 
     const nextTopic = sanitizeNextTopic(finalResponse.nextTopic, sessionState);
