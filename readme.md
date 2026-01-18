@@ -139,4 +139,6 @@ See `RALPH_SETUP.md` for detailed instructions.
 - Hover tooltips (name, age, uni)
 - Click interactions (highlight edges, show top matches)
 - Match explanation panel (similarity scores + top dimensions)
+
 - Chat integration (graph refresh on updates)
+- 
