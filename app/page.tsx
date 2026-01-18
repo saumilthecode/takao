@@ -25,18 +25,20 @@ import ChatInterface from '@/components/ChatInterface';
 import SocialGraph from '@/components/SocialGraph';
 import TunerDashboard from '@/components/TunerDashboard';
 import NextStep from '@/components/NextStep';
+import type { ProfileUpdate } from '@/lib/api';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
+  const [profile, setProfile] = useState<ProfileUpdate | null>(null);
   const reactId = useId();
   const sessionUserId = useMemo(
     () => `user_demo_${reactId.replace(/[:]/g, '')}`,
     [reactId]
   );
 
-  const handleProfileUpdate = () => {
-    // Trigger graph refresh when chat updates profile
+  const handleProfileUpdate = (nextProfile: ProfileUpdate | null) => {
+    setProfile(nextProfile);
     setGraphRefreshKey(prev => prev + 1);
   };
 
@@ -91,7 +93,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="next" className="mt-6">
-            <NextStep />
+            <NextStep profile={profile} />
           </TabsContent>
 
           <TabsContent value="space" className="mt-6">

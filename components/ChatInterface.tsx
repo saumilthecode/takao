@@ -43,7 +43,7 @@ const SCENARIO_SCRIPTS: Record<string, string> = {
 
 interface ChatInterfaceProps {
   userId: string;
-  onProfileUpdate?: () => void;
+  onProfileUpdate?: (profile: ProfileUpdate | null) => void;
 }
 
 export default function ChatInterface({ userId, onProfileUpdate }: ChatInterfaceProps) {
@@ -134,25 +134,26 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
       // Update profile with smooth transition
       if (response.profileUpdate) {
         setProfile(prev => {
-          if (!prev) return response.profileUpdate;
-          // Blend old and new for smooth updates
-          return {
-            traits: {
-              openness: response.profileUpdate.traits.openness,
-              conscientiousness: response.profileUpdate.traits.conscientiousness,
-              extraversion: response.profileUpdate.traits.extraversion,
-              agreeableness: response.profileUpdate.traits.agreeableness,
-              neuroticism: response.profileUpdate.traits.neuroticism,
-            },
-            interests: { ...prev.interests, ...response.profileUpdate.interests },
-            confidence: Math.max(prev.confidence, response.profileUpdate.confidence)
-          };
+          const nextProfile = prev
+            ? {
+                traits: {
+                  openness: response.profileUpdate.traits.openness,
+                  conscientiousness: response.profileUpdate.traits.conscientiousness,
+                  extraversion: response.profileUpdate.traits.extraversion,
+                  agreeableness: response.profileUpdate.traits.agreeableness,
+                  neuroticism: response.profileUpdate.traits.neuroticism,
+                },
+                interests: { ...prev.interests, ...response.profileUpdate.interests },
+                confidence: Math.max(prev.confidence, response.profileUpdate.confidence)
+              }
+            : response.profileUpdate;
+
+          if (nextProfile.confidence > 0.1) {
+            onProfileUpdate?.(nextProfile);
+          }
+
+          return nextProfile;
         });
-        
-        // Notify parent that profile was updated (triggers graph refresh)
-        if (response.profileUpdate.confidence > 0.1) {
-          onProfileUpdate?.();
-        }
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -179,7 +180,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
       const { conversation } = await simulateChat(userId);
       setMessages(conversation);
       // Simulate profile update from demo
-      setProfile({
+      const simulatedProfile = {
         traits: {
           openness: 0.7,
           conscientiousness: 0.6,
@@ -189,8 +190,9 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
         },
         interests: { 'reading': 0.8, 'tech': 0.9, 'hackathons': 0.7, 'coffee': 0.6 },
         confidence: 0.75
-      });
-      onProfileUpdate?.();
+      };
+      setProfile(simulatedProfile);
+      onProfileUpdate?.(simulatedProfile);
     } catch (error) {
       console.error('Simulation error:', error);
     } finally {
@@ -210,6 +212,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
     setScenarioKey('');
     setPlanVisible(false);
     setPlanSent(false);
+    onProfileUpdate?.(null);
     inputRef.current?.focus();
   }, []);
 
@@ -220,7 +223,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
-            Signal Chat
+            Chat
           </CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleReset} disabled={isLoading}>
@@ -338,11 +341,11 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            Your Signal Profile
+            Your Profile
             <Badge className="text-xs bg-black text-primary-foreground">Visible to dev/UAT</Badge>
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Real-time signal insights
+            Real-time insights
           </p>
         </CardHeader>
         <CardContent>
@@ -351,7 +354,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
               {/* Traits as bars */}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Trait Signals
+                  Traits
                 </p>
                 {Object.entries(profile.traits).map(([trait, value]) => (
                   <div key={trait}>
@@ -395,7 +398,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
               {/* Confidence */}
               <div className="pt-3 border-t">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Signal Confidence</span>
+                  <span className="text-sm font-medium">Confidence</span>
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-16 bg-secondary rounded-full overflow-hidden">
                       <div 
@@ -413,8 +416,8 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
           ) : (
             <div className="text-center text-muted-foreground py-12">
               <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-50" />
-              <p className="text-sm font-medium">Start chatting to build your signal profile</p>
-              <p className="text-xs mt-2 opacity-75">We extract conversational signals from your responses</p>
+              <p className="text-sm font-medium">Start chatting to build your profile</p>
+              <p className="text-xs mt-2 opacity-75">We extract conversational insights from your responses</p>
               <p className="text-xs mt-2 opacity-75">Or tap a scenario to demo instantly.</p>
             </div>
           )}

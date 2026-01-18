@@ -15,12 +15,83 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowDown, Sparkles } from 'lucide-react';
+import type { ProfileUpdate } from '@/lib/api';
 
-export default function NextStep() {
+const DEFAULT_INTERESTS = ['AI', 'Casual sports', 'Cafés', 'Study sessions'];
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatInterestList(interests: string[]): string {
+  if (interests.length === 0) return '';
+  if (interests.length === 1) return interests[0];
+  if (interests.length === 2) return `${interests[0]} and ${interests[1]}`;
+  return `${interests.slice(0, -1).join(', ')}, and ${interests[interests.length - 1]}`;
+}
+
+interface NextStepProps {
+  profile?: ProfileUpdate | null;
+}
+
+export default function NextStep({ profile }: NextStepProps) {
+  const traits = profile?.traits;
+  const interestList = useMemo(() => {
+    const entries = Object.entries(profile?.interests || {})
+      .sort(([, a], [, b]) => b - a)
+      .map(([interest]) => interest);
+    const top = entries.length ? entries.slice(0, 4) : DEFAULT_INTERESTS;
+    return top;
+  }, [profile?.interests]);
+
+  const interactionPosition = useMemo(() => {
+    if (!traits) return 20;
+    const spontaneity = clamp(traits.extraversion * 0.6 + traits.openness * 0.4, 0, 1);
+    return Math.round((1 - spontaneity) * 70 + 10);
+  }, [traits]);
+
+  const groupPosition = useMemo(() => {
+    if (!traits) return 45;
+    const groupScore = clamp(traits.extraversion * 0.5 + traits.agreeableness * 0.5, 0, 1);
+    return Math.round(groupScore * 70 + 15);
+  }, [traits]);
+
+  const interactionText = useMemo(() => {
+    if (!traits) return 'More reflective than spontaneous.';
+    const score = traits.extraversion * 0.6 + traits.openness * 0.4;
+    if (score < 0.4) return 'More reflective than spontaneous.';
+    if (score < 0.6) return 'Balanced between reflective and spontaneous.';
+    return 'More spontaneous than reflective.';
+  }, [traits]);
+
+  const groupText = useMemo(() => {
+    if (!traits) return 'Prefers small groups in low‑pressure settings.';
+    const score = traits.extraversion * 0.5 + traits.agreeableness * 0.5;
+    if (score < 0.35) return 'Prefers solo or one‑on‑one settings.';
+    if (score < 0.65) return 'Prefers small groups in low‑pressure settings.';
+    return 'Comfortable in larger groups when the vibe is relaxed.';
+  }, [traits]);
+
+  const interestSentence = useMemo(() => {
+    const list = formatInterestList(interestList);
+    return list
+      ? `Often gravitates toward ${list}.`
+      : 'Often gravitates toward a few recurring interests.';
+  }, [interestList]);
+
+  const systemContext = useMemo(() => {
+    const confidence = profile?.confidence ?? 0;
+    if (confidence < 0.3) return 'We’re just getting to know how you engage socially.';
+    if (confidence < 0.55) return 'We have a general sense of how you engage socially.';
+    if (confidence < 0.8) return 'We have a stable picture of how you engage socially.';
+    return 'We have a strong understanding of how you engage socially.';
+  }, [profile?.confidence]);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 step-enter">
@@ -28,9 +99,6 @@ export default function NextStep() {
           <Sparkles className="h-4 w-4 text-primary" />
           Here&apos;s how the system currently sees you — this updates as you talk.
         </div>
-        <p className="text-xs text-muted-foreground italic opacity-70">
-          This view updates as we get to know you.
-        </p>
       </div>
 
       {/* Section 1 — Snapshot (Input) */}
@@ -48,9 +116,14 @@ export default function NextStep() {
               <span>Spontaneous</span>
             </div>
             <div className="relative h-3">
-              <span className="absolute left-[20%] -top-1 text-xs indicator-float">▲</span>
+              <span
+                className="absolute -top-1 text-xs indicator-float"
+                style={{ left: `${interactionPosition}%` }}
+              >
+                ▲
+              </span>
             </div>
-            <p>More reflective than spontaneous.</p>
+            <p>{interactionText}</p>
           </div>
 
           <div className="space-y-2 rounded-xl border border-border/50 p-3">
@@ -63,25 +136,36 @@ export default function NextStep() {
               <span>Large groups</span>
             </div>
             <div className="relative h-3">
-              <span className="absolute left-[45%] -top-1 text-xs indicator-float">▲</span>
+              <span
+                className="absolute -top-1 text-xs indicator-float"
+                style={{ left: `${groupPosition}%` }}
+              >
+                ▲
+              </span>
             </div>
-            <p>Prefers small groups in low‑pressure settings.</p>
+            <p>{groupText}</p>
           </div>
 
           <div className="space-y-2 rounded-xl border border-border/50 p-3">
             <p className="text-xs font-semibold">Top interests</p>
-            <p>Often gravitates toward AI discussions, casual sports, and quiet café sessions.</p>
+            <p>{interestSentence}</p>
             <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="secondary" title="Often shows up in conversations." className="transition-transform hover:-translate-y-[1px]">AI</Badge>
-              <Badge variant="secondary" title="Prefers relaxed social settings." className="transition-transform hover:-translate-y-[1px]">Cafés</Badge>
-              <Badge variant="secondary" title="Energy is best in low‑pressure groups." className="transition-transform hover:-translate-y-[1px]">Casual sports</Badge>
-              <Badge variant="secondary" title="Likes structured meetups." className="transition-transform hover:-translate-y-[1px]">Study sessions</Badge>
+              {interestList.map(interest => (
+                <Badge
+                  key={interest}
+                  variant="secondary"
+                  title="Often shows up in conversations."
+                  className="transition-transform hover:-translate-y-[1px]"
+                >
+                  {interest}
+                </Badge>
+              ))}
             </div>
           </div>
 
           <div className="space-y-2 rounded-xl border border-border/50 p-3">
             <p className="text-xs font-semibold">System context</p>
-            <p>We have a stable picture of how you engage socially.</p>
+            <p>{systemContext}</p>
           </div>
         </CardContent>
       </Card>

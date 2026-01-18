@@ -374,18 +374,19 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
 
   useEffect(() => {
     if (!filteredGraphData || !graphRef.current) return;
-    if (graphMode === 'force') {
-      const linkForce = graphRef.current.d3Force?.('link');
-      if (linkForce?.distance) {
-        linkForce.distance((link: any) => {
-          const strength = (link as GraphLink)?.strength ?? 0.2;
-          return 110 - strength * 60;
-        });
-      }
-      const chargeForce = graphRef.current.d3Force?.('charge');
-      chargeForce?.strength?.(-120);
-      graphRef.current.d3ReheatSimulation?.();
+    const linkForce = graphRef.current.d3Force?.('link');
+    if (linkForce?.distance) {
+      linkForce.distance((link: any) => {
+        const strength = (link as GraphLink)?.strength ?? 0.2;
+        return 140 - strength * 80;
+      });
     }
+    if (linkForce?.strength) {
+      linkForce.strength(graphMode === 'embedding' ? 0.02 : 0.05);
+    }
+    const chargeForce = graphRef.current.d3Force?.('charge');
+    chargeForce?.strength?.(graphMode === 'embedding' ? -60 : -90);
+    graphRef.current.d3ReheatSimulation?.();
   }, [filteredGraphData, graphMode]);
 
   useEffect(() => {
@@ -558,6 +559,13 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                   linkWidth={selectedNode ? 1.6 : 0.8}
                   linkColor={() => 'rgba(46,62,45,0.65)'}
                   onNodeHover={(node: any, event: any) => handleNodeHover(node, event as MouseEvent)}
+                  onNodeDrag={() => graphRef.current?.d3ReheatSimulation?.()}
+                  onNodeDragEnd={(node: any) => {
+                    node.fx = undefined;
+                    node.fy = undefined;
+                    node.fz = undefined;
+                    graphRef.current?.d3ReheatSimulation?.();
+                  }}
                   onNodeClick={(node: any) => {
                     handleNodeClick(node);
                     graphRef.current?.cameraPosition(
@@ -566,7 +574,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                       900
                     );
                   }}
-                  enableNodeDrag={false}
+                  enableNodeDrag={true}
                   showNavInfo={false}
                   backgroundColor="rgba(0,0,0,0)"
                 />

@@ -252,3 +252,42 @@ Legend:
 https://artsmart.ai/blog/top-embedding-models-in-2025/
 https://www.nature.com/articles/s41562-024-02089-y
 https://pmc.ncbi.nlm.nih.gov/articles/PMC11612277/
+
+You only get invited when 
+Right now the plan is triggered when either:
+confidence >= 0.75, or
+turn_count >= 10
+That’s enforced server‑side in the chat routes. After that, the fixed plan is returned and shown in the UI.
+
+Chat + signals
+Turn count: how many back‑and‑forth messages have happened in the current chat session. Used as a simple “enough context” threshold.
+Confidence (signal confidence): how sure the system is that it has enough signal to make stable updates. Higher confidence means the system is less likely to change its understanding.
+Signals: small, incremental hints about behavior (e.g., spontaneity, planning preference). These are not scores, just nudges that update the profile gradually.
+
+Big‑5 traits (traits in the UI)
+These are common psychology dimensions used in many research settings (but here they’re just system traits, not “labels”):
+Openness: curiosity / openness to new ideas.
+Conscientiousness: structure / planning / follow‑through.
+Extraversion: social energy / stimulation seeking.
+Agreeableness: cooperativeness / warmth.
+Neuroticism: sensitivity to stress / emotional reactivity.
+(Important: your UI does not show these directly; they only power the system internally.)
+
+Index tuner (Space/Tuner tab)
+Index tuner: a simple tool that tests different similarity‑search configurations to find the best balance of speed and quality.
+Latency: how fast results come back (lower = faster).
+Recall: how often the system retrieves the “best” matches (higher = more accurate)
+
+Space tab (graph)
+Force: a physics‑style layout that pushes/pulls nodes to show clusters.
+Embedding: a fixed coordinate layout derived from similarity math (UMAP).
+Highlight circle: visually emphasizes the circle of five people selected for you.
+Reset camera: recenters and zooms the view so the graph is readable.
+
+LLM signal extraction (structured signals per turn)
+Semantic embeddings (messages + interests)
+Vector math (L2 normalization, cosine similarity)
+kNN retrieval (top‑k neighbors)
+Clustering (DBSCAN)
+UMAP for embedding layout
+Explainability (top contributing dimensions)
