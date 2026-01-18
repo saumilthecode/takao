@@ -378,14 +378,14 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
     if (linkForce?.distance) {
       linkForce.distance((link: any) => {
         const strength = (link as GraphLink)?.strength ?? 0.2;
-        return 140 - strength * 80;
+        return 180 - strength * 90;
       });
     }
     if (linkForce?.strength) {
-      linkForce.strength(graphMode === 'embedding' ? 0.02 : 0.05);
+      linkForce.strength(graphMode === 'embedding' ? 0.015 : 0.035);
     }
     const chargeForce = graphRef.current.d3Force?.('charge');
-    chargeForce?.strength?.(graphMode === 'embedding' ? -60 : -90);
+    chargeForce?.strength?.(graphMode === 'embedding' ? -45 : -70);
     graphRef.current.d3ReheatSimulation?.();
   }, [filteredGraphData, graphMode]);
 
@@ -465,7 +465,7 @@ export default function SocialGraph({ focusUserId }: SocialGraphProps) {
                 <span className="font-medium text-foreground">Embedding</span> places everyone by learned similarity coordinates.
               </div>
             </div>
-            <div className="relative h-[calc(100vh-200px)] min-h-[560px] w-full overflow-hidden rounded-none border-0 bg-transparent -ml-6">
+            <div className="relative h-[calc(100vh-200px)] min-h-[560px] w-full overflow-hidden rounded-none border-0 bg-transparent">
 
               <div className="absolute left-6 top-4 z-10 rounded-xl border border-border/40 bg-background/70 px-3 py-2 text-xs text-foreground">
                 <div className="font-semibold">Legend</div>
