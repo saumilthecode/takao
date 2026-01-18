@@ -11,10 +11,11 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CreditCard, Lock, CheckCircle2, ArrowLeft, Sparkles } from 'lucide-react';
+import { CreditCard, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 
 export default function PayClient() {
   const searchParams = useSearchParams();
@@ -97,7 +98,7 @@ export default function PayClient() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <Image src="/stickman.png" alt="Takoa" width={24} height={24} className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Takoa</h1>
           </div>
           <p className="text-sm text-muted-foreground">Demo Payment Page</p>

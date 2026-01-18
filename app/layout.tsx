@@ -34,6 +34,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Takoa - Find Your People',
   description: 'University friend-matching with 3D vector visualization',
+  icons: {
+    icon: '/stickman.png',
+    shortcut: '/stickman.png',
+    apple: '/stickman.png',
+  },
 };
 
 export default function RootLayout({

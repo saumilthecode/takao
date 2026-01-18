@@ -31,7 +31,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Send, Bot, User, Play, Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import Image from 'next/image';
+import { Send, Bot, User, Play, Loader2, RotateCcw } from 'lucide-react';
 import { sendChatMessage, simulateChat, ChatMessage, ProfileUpdate } from '@/lib/api';
 
 const SCENARIO_SCRIPTS: Record<string, string> = {
@@ -340,7 +341,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Image src="/stickman.png" alt="Profile" width={16} height={16} className="h-4 w-4" />
             Your Profile
             <Badge className="text-xs bg-black text-primary-foreground">Visible to dev/UAT</Badge>
           </CardTitle>
@@ -415,7 +416,7 @@ export default function ChatInterface({ userId, onProfileUpdate }: ChatInterface
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-12">
-              <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-50" />
+              <Image src="/stickman.png" alt="Profile" width={32} height={32} className="h-8 w-8 mx-auto mb-3 opacity-50" />
               <p className="text-sm font-medium">Start chatting to build your profile</p>
               <p className="text-xs mt-2 opacity-75">We extract conversational insights from your responses</p>
               <p className="text-xs mt-2 opacity-75">Or tap a scenario to demo instantly.</p>

@@ -16,10 +16,11 @@
 'use client';
 
 import { useMemo } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, Sparkles } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import type { ProfileUpdate } from '@/lib/api';
 
 const DEFAULT_INTERESTS = ['AI', 'Casual sports', 'Cafés', 'Study sessions'];
@@ -96,7 +97,7 @@ export default function NextStep({ profile }: NextStepProps) {
     <div className="space-y-8">
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 step-enter">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Image src="/stickman.png" alt="Info" width={16} height={16} className="h-4 w-4" />
           Here&apos;s how the system currently sees you — this updates as you talk.
         </div>
       </div>
